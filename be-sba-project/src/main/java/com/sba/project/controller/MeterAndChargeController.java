@@ -1,5 +1,4 @@
 package com.sba.project.controller;
-
 import com.sba.project.dto.request.*;
 import com.sba.project.dto.response.*;
 import com.sba.project.service.MeterAndChargeService;
@@ -12,15 +11,9 @@ import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
-
-/**
- * API nhập chỉ số điện/nước và tính phí dịch vụ.
- * [BE-04.2] Student 4
- */
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
@@ -28,10 +21,8 @@ public class MeterAndChargeController {
 
     private final MeterAndChargeService meterAndChargeService;
 
-    /**
-     * [P1-74] Nhập chỉ số điện/nước
-     */
     @PostMapping("/meter-readings")
+
     public ResponseEntity<RoomServiceChargeResponse> createMeterReading(
             @Valid @RequestBody CreateMeterReadingRequest request,
             @RequestHeader("X-User-Id") UUID userId) {
@@ -39,10 +30,8 @@ public class MeterAndChargeController {
                 .body(meterAndChargeService.createMeterReading(request, userId));
     }
 
-    /**
-     * [P1-76] Tạo phí dịch vụ (theo người, theo phòng, cố định, theo lượt)
-     */
     @PostMapping("/service-charges")
+
     public ResponseEntity<RoomServiceChargeResponse> createServiceCharge(
             @Valid @RequestBody CreateServiceChargeRequest request,
             @RequestHeader("X-User-Id") UUID userId) {
@@ -50,20 +39,16 @@ public class MeterAndChargeController {
                 .body(meterAndChargeService.createServiceCharge(request, userId));
     }
 
-    /**
-     * [P1-88] Chốt phí dịch vụ - đóng băng đơn giá và số tiền
-     */
     @PatchMapping("/service-charges/{chargeId}/finalize")
+
     public ResponseEntity<RoomServiceChargeResponse> finalizeCharge(
             @PathVariable UUID chargeId,
             @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(meterAndChargeService.finalizeCharge(chargeId, userId));
     }
 
-    /**
-     * [P1-78] Xem phí dịch vụ theo phòng và kỳ
-     */
     @GetMapping("/rooms/{roomId}/service-charges")
+
     public ResponseEntity<List<RoomServiceChargeResponse>> getChargesByRoomAndPeriod(
             @PathVariable UUID roomId,
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
@@ -71,18 +56,14 @@ public class MeterAndChargeController {
         return ResponseEntity.ok(meterAndChargeService.getChargesByRoomAndPeriod(roomId, from, to));
     }
 
-    /**
-     * Xem phí chưa chốt cho phòng
-     */
     @GetMapping("/rooms/{roomId}/service-charges/unfinalized")
+
     public ResponseEntity<List<RoomServiceChargeResponse>> getUnfinalizedCharges(@PathVariable UUID roomId) {
         return ResponseEntity.ok(meterAndChargeService.getUnfinalizedCharges(roomId));
     }
 
-    /**
-     * Phân trang xem phí theo phòng
-     */
     @GetMapping("/rooms/{roomId}/service-charges/all")
+
     public ResponseEntity<PageResponse<RoomServiceChargeResponse>> getChargesByRoomPaged(
             @PathVariable UUID roomId,
             @RequestParam(defaultValue = "0") int page,

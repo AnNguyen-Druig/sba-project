@@ -1,8 +1,6 @@
 package com.sba.project.dto.request;
-
 import jakarta.validation.constraints.NotNull;
 import lombok.*;
-
 @Data
 @Builder
 @NoArgsConstructor
@@ -10,7 +8,8 @@ import lombok.*;
 public class ProcessAllocationRequest {
 
     @NotNull(message = "Trạng thái xử lý không được để trống")
-    private Boolean approved; // true = approve, false = reject
+
+    private Boolean approved; 
 
     private String rejectionReason;
 }

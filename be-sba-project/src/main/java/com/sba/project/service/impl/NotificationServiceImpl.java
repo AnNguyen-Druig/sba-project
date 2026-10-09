@@ -1,5 +1,4 @@
 package com.sba.project.service.impl;
-
 import com.sba.project.dto.response.*;
 import com.sba.project.entity.Notification;
 import com.sba.project.enums.NotificationType;
@@ -15,18 +14,14 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.time.LocalDateTime;
 import java.util.UUID;
-
 @Service
 @RequiredArgsConstructor
 @Slf4j
 @Transactional
 public class NotificationServiceImpl implements NotificationService {
-
     private final NotificationRepository notificationRepository;
-
     @Override
     @EventListener
     public void createNotification(NotificationEvent event) {
@@ -40,16 +35,13 @@ public class NotificationServiceImpl implements NotificationService {
                 .branchId(event.getBranchId())
                 .isRead(false)
                 .build();
-
         notificationRepository.save(notification);
         log.info("Created notification for user {} type {}", event.getRecipientId(), event.getType());
     }
-
     @Override
     @Transactional(readOnly = true)
     public PageResponse<NotificationResponse> getNotifications(UUID recipientId, Boolean isRead, NotificationType type, Pageable pageable) {
         Page<Notification> page;
-
         if (type != null) {
             page = notificationRepository.findByRecipientIdAndTypeOrderByCreatedAtDesc(recipientId, type, pageable);
         } else if (isRead != null) {
@@ -57,40 +49,30 @@ public class NotificationServiceImpl implements NotificationService {
         } else {
             page = notificationRepository.findByRecipientIdOrderByCreatedAtDesc(recipientId, pageable);
         }
-
         return buildPageResponse(page.map(this::mapToResponse));
     }
-
     @Override
     public NotificationResponse markAsRead(UUID notificationId, UUID recipientId) {
         Notification notification = notificationRepository.findById(notificationId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy thông báo: " + notificationId));
-
-        // [P1-124] Chỉ người nhận mới được đánh dấu
         if (!notification.getRecipientId().equals(recipientId)) {
             throw new BusinessException("Bạn không có quyền thao tác trên thông báo này");
         }
-
         notification.setRead(true);
         notification.setReadAt(LocalDateTime.now());
         notification = notificationRepository.save(notification);
         return mapToResponse(notification);
     }
-
     @Override
     public void markAllAsRead(UUID recipientId) {
         int updated = notificationRepository.markAllAsRead(recipientId);
         log.info("Marked {} notifications as read for user {}", updated, recipientId);
     }
-
     @Override
     @Transactional(readOnly = true)
     public long countUnread(UUID recipientId) {
         return notificationRepository.countByRecipientIdAndIsReadFalse(recipientId);
     }
-
-    // ==================== Mappers ====================
-
     private NotificationResponse mapToResponse(Notification n) {
         return NotificationResponse.builder()
                 .id(n.getId())
@@ -105,7 +87,6 @@ public class NotificationServiceImpl implements NotificationService {
                 .readAt(n.getReadAt())
                 .build();
     }
-
     private <T> PageResponse<T> buildPageResponse(Page<T> page) {
         return PageResponse.<T>builder()
                 .content(page.getContent())

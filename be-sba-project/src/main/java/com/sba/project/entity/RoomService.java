@@ -1,20 +1,12 @@
 package com.sba.project.entity;
-
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
-
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
-
-/**
- * Dịch vụ áp dụng cho phòng cụ thể với đơn giá riêng
- * [P1-69] Cấu hình dịch vụ và đơn giá áp dụng theo phòng/Branch
- * [P1-73] Quản lý dịch vụ áp dụng cho phòng
- */
 @Entity
 @Table(name = "room_services", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"roomId", "serviceId"}, name = "uk_room_service")
@@ -36,12 +28,12 @@ public class RoomService {
     private Service service;
 
     @Column(nullable = false, precision = 15, scale = 2)
-    private BigDecimal unitPrice; // Đơn giá áp dụng cho phòng này (có thể khác defaultUnitPrice)
+    private BigDecimal unitPrice; 
 
     @Column(nullable = false)
-    private LocalDate effectiveFrom; // Ngày bắt đầu áp dụng
+    private LocalDate effectiveFrom; 
 
-    private LocalDate effectiveTo; // Ngày kết thúc (null = vô thời hạn)
+    private LocalDate effectiveTo; 
 
     @Column(nullable = false)
     private boolean active;

@@ -1,5 +1,4 @@
 package com.sba.project.controller;
-
 import com.sba.project.dto.response.*;
 import com.sba.project.enums.NotificationType;
 import com.sba.project.service.NotificationService;
@@ -8,14 +7,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
 import java.util.Map;
 import java.util.UUID;
-
-/**
- * API thông báo trong ứng dụng.
- * [BE-04.4] Student 4
- */
 @RestController
 @RequestMapping("/api/v1/notifications")
 @RequiredArgsConstructor
@@ -23,9 +16,6 @@ public class NotificationController {
 
     private final NotificationService notificationService;
 
-    /**
-     * [P1-125] Lấy danh sách thông báo, hỗ trợ lọc đã đọc/chưa đọc và theo loại
-     */
     @GetMapping
     public ResponseEntity<PageResponse<NotificationResponse>> getNotifications(
             @RequestHeader("X-User-Id") UUID userId,
@@ -37,28 +27,21 @@ public class NotificationController {
         return ResponseEntity.ok(notificationService.getNotifications(userId, isRead, type, pageable));
     }
 
-    /**
-     * [P1-125] Đánh dấu đã đọc một thông báo
-     */
     @PatchMapping("/{notificationId}/read")
+
     public ResponseEntity<NotificationResponse> markAsRead(
             @PathVariable UUID notificationId,
             @RequestHeader("X-User-Id") UUID userId) {
         return ResponseEntity.ok(notificationService.markAsRead(notificationId, userId));
     }
 
-    /**
-     * [P1-125] Đánh dấu tất cả đã đọc
-     */
     @PatchMapping("/read-all")
+
     public ResponseEntity<Void> markAllAsRead(@RequestHeader("X-User-Id") UUID userId) {
         notificationService.markAllAsRead(userId);
         return ResponseEntity.noContent().build();
     }
 
-    /**
-     * Đếm số thông báo chưa đọc
-     */
     @GetMapping("/unread-count")
     public ResponseEntity<Map<String, Long>> countUnread(@RequestHeader("X-User-Id") UUID userId) {
         long count = notificationService.countUnread(userId);
