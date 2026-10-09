@@ -1,0 +1,11 @@
+# Copy to application-local.yml in this directory, then fill in DB_PASSWORD.
+# This file is a template; application-local.yml is ignored by Git.
+DB_URL: "jdbc:postgresql://aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres?sslmode=require"
+DB_USERNAME: "postgres.fmzupdyoxtlkxrfdtuly"
+DB_PASSWORD: 'REPLACE_WITH_YOUR_DATABASE_PASSWORD'
+
+# Optional overrides:
+# PORT: 8080
+# DB_POOL_MAX_SIZE: 5
+# DB_POOL_MIN_IDLE: 1
+# APP_LOG_LEVEL: INFO
