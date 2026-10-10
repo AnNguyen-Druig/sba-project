@@ -10,6 +10,7 @@ import com.sba.project.exception.BusinessException;
 import com.sba.project.exception.ResourceNotFoundException;
 import com.sba.project.mapper.RoomMapper;
 import com.sba.project.repository.RoomRepository;
+import com.sba.project.repository.RoomSlotRepository;
 import com.sba.project.repository.RoomTypeRepository;
 import com.sba.project.service.impl.RoomServiceImpl;
 import jakarta.persistence.EntityManager;
@@ -43,8 +44,8 @@ class PublicRoomServiceTest {
     @BeforeEach
     void setUp() {
         roomRepository = mock(RoomRepository.class);
-        service = new RoomServiceImpl(roomRepository, mock(RoomTypeRepository.class),
-                mock(EntityManager.class), new RoomMapper());
+        service = new RoomServiceImpl(roomRepository, mock(RoomTypeRepository.class), mock(RoomSlotRepository.class),
+                mock(EntityManager.class), new RoomMapper(), new com.sba.project.mapper.RoomSlotMapper());
         branch = Branch.builder().branchId(UUID.randomUUID()).branchName("Central").address("Main St").build();
         roomType = RoomType.builder().roomTypeId(UUID.randomUUID()).typeName("Studio").build();
         room = Room.builder().roomId(UUID.randomUUID()).branch(branch)
