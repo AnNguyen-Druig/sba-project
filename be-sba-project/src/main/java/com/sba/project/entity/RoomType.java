@@ -33,6 +33,6 @@ public class RoomType extends BaseEntity {
     @Column(name = "features", columnDefinition = "TEXT")
     private String features;
 
-    @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean not null default false")
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean default false")
     private boolean deleted;
 }

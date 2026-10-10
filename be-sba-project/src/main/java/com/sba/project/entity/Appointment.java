@@ -39,6 +39,6 @@ public class Appointment extends BaseEntity {
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
 
-    @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean not null default false")
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean default false")
     private boolean deleted;
 }

@@ -37,6 +37,6 @@ public class RoomSlot extends BaseEntity {
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
-    @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean not null default false")
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean default false")
     private boolean deleted;
 }
