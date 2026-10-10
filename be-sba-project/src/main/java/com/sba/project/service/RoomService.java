@@ -2,10 +2,12 @@ package com.sba.project.service;
 
 import com.sba.project.dto.request.RoomRequest;
 import com.sba.project.dto.request.RoomSearchRequest;
+import com.sba.project.dto.request.RoomSlotRequest;
+import com.sba.project.dto.request.RoomTypeRequest;
 import com.sba.project.dto.response.PublicRoomResponse;
 import com.sba.project.dto.response.RoomResponse;
-import com.sba.project.dto.request.RoomSlotRequest;
 import com.sba.project.dto.response.RoomSlotResponse;
+import com.sba.project.dto.response.RoomTypeResponse;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
@@ -37,4 +39,14 @@ public interface RoomService {
     RoomSlotResponse updateRoomSlot(UUID roomSlotId, RoomSlotRequest request);
 
     void deleteRoomSlot(UUID roomSlotId);
+
+    RoomTypeResponse createRoomType(RoomTypeRequest request);
+
+    RoomTypeResponse getRoomTypeById(UUID roomTypeId);
+
+    Page<RoomTypeResponse> listRoomTypes(Pageable pageable);
+
+    RoomTypeResponse updateRoomType(UUID roomTypeId, RoomTypeRequest request);
+
+    void deleteRoomType(UUID roomTypeId);
 }
