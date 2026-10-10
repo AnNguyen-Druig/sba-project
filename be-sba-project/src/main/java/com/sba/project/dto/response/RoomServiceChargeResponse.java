@@ -1,6 +1,7 @@
 package com.sba.project.dto.response;
 import lombok.*;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -32,5 +33,5 @@ public class RoomServiceChargeResponse {
 
     private boolean finalized;
 
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 }

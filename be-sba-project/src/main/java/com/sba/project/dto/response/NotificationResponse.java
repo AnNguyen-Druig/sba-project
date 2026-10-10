@@ -1,6 +1,7 @@
 package com.sba.project.dto.response;
 import com.sba.project.enums.NotificationType;
 import lombok.*;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 @Data
@@ -25,7 +26,7 @@ public class NotificationResponse {
 
     private UUID branchId;
 
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
     private LocalDateTime readAt;
 }
