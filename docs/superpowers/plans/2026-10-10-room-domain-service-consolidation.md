@@ -68,11 +68,14 @@ Expected: both test classes pass.
 - Delete: `be-sba-project/src/main/java/com/sba/project/service/RoomSlotService.java`
 - Delete: `be-sba-project/src/main/java/com/sba/project/service/impl/RoomSlotServiceImpl.java`
 - Modify: `be-sba-project/src/test/java/com/sba/project/service/RoomSlotServiceTest.java`
+- Modify: `be-sba-project/src/test/java/com/sba/project/service/RoomServiceTest.java`
+- Modify: `be-sba-project/src/test/java/com/sba/project/service/PublicRoomServiceTest.java`
 - Modify: `be-sba-project/src/test/java/com/sba/project/controller/RoomSlotControllerTest.java`
 
 **Interfaces:**
 - Consumes: Task 1 `RoomService` and `RoomServiceImpl`.
 - Produces: `createRoomSlot(RoomSlotRequest)`, `getRoomSlotById(UUID)`, `listRoomSlotsByRoom(UUID)`, `updateRoomSlot(UUID, RoomSlotRequest)`, and `deleteRoomSlot(UUID)` on `RoomService`.
+- Also adds `RoomSlotRepository` and `RoomSlotMapper` constructor dependencies to `RoomServiceImpl`; update existing shared-service test constructors to pass mocks for those dependencies.
 
 - [ ] **Step 1: Update room slot service/controller tests to construct or mock `RoomService` and call the resource-specific methods. Keep all route, validation, ownership, and error assertions.**
 - [ ] **Step 2: Run the focused room slot tests and confirm they fail because the shared methods are absent.**
@@ -99,11 +102,15 @@ Expected: both test classes pass.
 - Delete: `be-sba-project/src/main/java/com/sba/project/service/RoomTypeService.java`
 - Delete: `be-sba-project/src/main/java/com/sba/project/service/impl/RoomTypeServiceImpl.java`
 - Modify: `be-sba-project/src/test/java/com/sba/project/service/RoomTypeServiceTest.java`
+- Modify: `be-sba-project/src/test/java/com/sba/project/service/RoomServiceTest.java`
+- Modify: `be-sba-project/src/test/java/com/sba/project/service/PublicRoomServiceTest.java`
+- Modify: `be-sba-project/src/test/java/com/sba/project/service/RoomSlotServiceTest.java`
 - Modify: `be-sba-project/src/test/java/com/sba/project/controller/RoomTypeControllerTest.java`
 
 **Interfaces:**
 - Consumes: Task 1 and Task 2 `RoomService` operations.
 - Produces: `createRoomType(RoomTypeRequest)`, `getRoomTypeById(UUID)`, `listRoomTypes(Pageable)`, `updateRoomType(UUID, RoomTypeRequest)`, and `deleteRoomType(UUID)` on `RoomService`.
+- Also adds `RoomTypeMapper` as a constructor dependency to `RoomServiceImpl`; update all service test constructors to pass its mock.
 
 - [ ] **Step 1: Update room type service/controller tests to construct or mock `RoomService` and call the resource-specific methods. Keep existing validation, pagination, 404, and referenced-delete 409 assertions.**
 - [ ] **Step 2: Run the focused room type tests and confirm they fail because the shared methods are absent.**
