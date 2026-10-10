@@ -2,6 +2,7 @@ package com.sba.project.service.impl;
 
 import com.sba.project.dto.request.RoomRequest;
 import com.sba.project.dto.request.RoomSearchRequest;
+import com.sba.project.dto.response.PublicRoomResponse;
 import com.sba.project.dto.response.RoomResponse;
 import com.sba.project.entity.Branch;
 import com.sba.project.entity.Manager;
@@ -18,15 +19,20 @@ import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 public class RoomServiceImpl implements RoomService {
+
+    private static final Set<String> ALLOWED_PUBLIC_SORT_PROPERTIES = Set.of("referencePrice", "capacity", "roomCode");
 
     private final RoomRepository roomRepository;
     private final RoomTypeRepository roomTypeRepository;
@@ -100,6 +106,32 @@ public class RoomServiceImpl implements RoomService {
         }
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PublicRoomResponse> searchPublicRooms(RoomSearchRequest criteria, Pageable pageable) {
+        if (criteria.getMinPrice() != null && criteria.getMaxPrice() != null
+                && criteria.getMinPrice().compareTo(criteria.getMaxPrice()) > 0) {
+            throw new BusinessException("Giá tối thiểu không được lớn hơn giá tối đa");
+        }
+        validatePublicSort(pageable.getSort());
+        Pageable effectivePageable = pageable.getSort().isUnsorted()
+                ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by("roomCode"))
+                : pageable;
+
+        return roomRepository.search(criteria.getBranchId(), criteria.getRoomTypeId(), criteria.getMinPrice(),
+                        criteria.getMaxPrice(), criteria.getMinCapacity(), normalize(criteria.getStatus()),
+                        normalize(criteria.getAddress()), effectivePageable)
+                .map(roomMapper::toPublicResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PublicRoomResponse getPublicRoomById(UUID roomId) {
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng: " + roomId));
+        return roomMapper.toPublicResponse(room);
+    }
+
     private Room requireRoom(UUID roomId) {
         return roomRepository.findById(roomId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng: " + roomId));
@@ -134,6 +166,14 @@ public class RoomServiceImpl implements RoomService {
 
     private DuplicateResourceException duplicateRoomCode(String roomCode) {
         return new DuplicateResourceException("Mã phòng đã tồn tại trong chi nhánh: " + roomCode);
+    }
+
+    private void validatePublicSort(Sort sort) {
+        for (Sort.Order order : sort) {
+            if (!ALLOWED_PUBLIC_SORT_PROPERTIES.contains(order.getProperty())) {
+                throw new BusinessException("Không hỗ trợ sắp xếp theo: " + order.getProperty());
+            }
+        }
     }
 
     private String normalize(String value) {

@@ -4,7 +4,7 @@ import com.sba.project.dto.request.RoomSearchRequest;
 import com.sba.project.dto.response.PublicRoomResponse;
 import com.sba.project.exception.BusinessException;
 import com.sba.project.exception.ResourceNotFoundException;
-import com.sba.project.service.PublicRoomService;
+import com.sba.project.service.RoomService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -33,11 +33,11 @@ class PublicRoomControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private PublicRoomService publicRoomService;
+    private RoomService roomService;
 
     @Test
     void search_returns200AndPage() throws Exception {
-        when(publicRoomService.search(any(RoomSearchRequest.class), any()))
+        when(roomService.searchPublicRooms(any(RoomSearchRequest.class), any()))
                 .thenReturn(new PageImpl<>(List.of(response(UUID.randomUUID()))));
 
         mockMvc.perform(get("/api/v1/public/rooms").param("address", "Main St")
@@ -48,7 +48,7 @@ class PublicRoomControllerTest {
 
     @Test
     void search_invalidSort_returns400() throws Exception {
-        when(publicRoomService.search(any(RoomSearchRequest.class), any()))
+        when(roomService.searchPublicRooms(any(RoomSearchRequest.class), any()))
                 .thenThrow(new BusinessException("unsupported sort"));
 
         mockMvc.perform(get("/api/v1/public/rooms").param("sort", "managerId,asc"))
@@ -58,7 +58,7 @@ class PublicRoomControllerTest {
     @Test
     void detail_unknownId_returns404() throws Exception {
         UUID id = UUID.randomUUID();
-        when(publicRoomService.getById(id)).thenThrow(new ResourceNotFoundException("not found"));
+        when(roomService.getPublicRoomById(id)).thenThrow(new ResourceNotFoundException("not found"));
 
         mockMvc.perform(get("/api/v1/public/rooms/{roomId}", id))
                 .andExpect(status().isNotFound());
@@ -67,7 +67,7 @@ class PublicRoomControllerTest {
     @Test
     void detail_jsonHasNoManagerId() throws Exception {
         UUID id = UUID.randomUUID();
-        when(publicRoomService.getById(id)).thenReturn(response(id));
+        when(roomService.getPublicRoomById(id)).thenReturn(response(id));
 
         mockMvc.perform(get("/api/v1/public/rooms/{roomId}", id).accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
