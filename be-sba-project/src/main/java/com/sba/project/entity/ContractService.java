@@ -2,8 +2,6 @@ package com.sba.project.entity;
 import com.sba.project.enums.ServiceRegistrationStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -12,7 +10,7 @@ import java.util.UUID;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
-public class ContractService {
+public class ContractService extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -41,10 +39,4 @@ public class ContractService {
     private LocalDateTime processedAt;
 
     private String rejectionReason;
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 }

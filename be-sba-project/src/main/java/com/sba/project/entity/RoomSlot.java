@@ -2,17 +2,19 @@ package com.sba.project.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.util.UUID;
 
 @Entity
+@SQLRestriction("is_deleted = false")
 @Table(name = "room_slots")
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class RoomSlot {
+public class RoomSlot extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -34,4 +36,7 @@ public class RoomSlot {
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
+
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean default false")
+    private boolean deleted;
 }

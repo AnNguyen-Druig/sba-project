@@ -6,6 +6,7 @@ import com.sba.project.dto.response.RoomResponse;
 import com.sba.project.entity.Branch;
 import com.sba.project.entity.Manager;
 import com.sba.project.entity.Room;
+import com.sba.project.entity.RoomSlot;
 import com.sba.project.entity.RoomType;
 import com.sba.project.exception.BusinessException;
 import com.sba.project.exception.DuplicateResourceException;
@@ -31,8 +32,8 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -43,6 +44,7 @@ class RoomServiceTest {
     private RoomRepository roomRepository;
     private RoomTypeRepository roomTypeRepository;
     private EntityManager entityManager;
+    private RoomSlotRepository roomSlotRepository;
     private RoomServiceImpl service;
     private Branch branch;
     private Manager manager;
@@ -52,8 +54,9 @@ class RoomServiceTest {
     void setUp() {
         roomRepository = mock(RoomRepository.class);
         roomTypeRepository = mock(RoomTypeRepository.class);
+        roomSlotRepository = mock(RoomSlotRepository.class);
         entityManager = mock(EntityManager.class);
-        service = new RoomServiceImpl(roomRepository, roomTypeRepository, mock(RoomSlotRepository.class),
+        service = new RoomServiceImpl(roomRepository, roomTypeRepository, roomSlotRepository,
                 entityManager, new RoomMapper(), new RoomSlotMapper(), new RoomTypeMapper());
         branch = Branch.builder().branchId(UUID.randomUUID()).branchName("Central").address("Main St").build();
         manager = Manager.builder().managerId(UUID.randomUUID()).build();
@@ -203,12 +206,21 @@ class RoomServiceTest {
     }
 
     @Test
-    void delete_fkViolation_throws409() {
+    void delete_softDeletesRoomAndSlots() {
         UUID id = UUID.randomUUID();
-        when(roomRepository.findById(id)).thenReturn(Optional.of(room(id, branch, manager, roomType, "A-01")));
-        doThrow(new DataIntegrityViolationException("referenced")).when(roomRepository).flush();
+        Room room = room(id, branch, manager, roomType, "A-01");
+        RoomSlot slot = RoomSlot.builder().roomSlotId(UUID.randomUUID()).room(room).slotCode("B1")
+                .slotName("Bed 1").status("AVAILABLE").build();
+        when(roomRepository.findById(id)).thenReturn(Optional.of(room), Optional.empty());
+        when(roomSlotRepository.findByRoom_RoomId(id)).thenReturn(List.of(slot));
 
-        assertThrows(DuplicateResourceException.class, () -> service.delete(id));
+        service.delete(id);
+
+        assertTrue(room.isDeleted());
+        assertTrue(slot.isDeleted());
+        verify(roomRepository, never()).delete(any(Room.class));
+        verify(roomSlotRepository, never()).delete(any(RoomSlot.class));
+        assertThrows(ResourceNotFoundException.class, () -> service.delete(id));
     }
 
     private void stubReferences(RoomRequest request) {

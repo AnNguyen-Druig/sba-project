@@ -2,6 +2,7 @@ package com.sba.project.dto.response;
 import com.sba.project.enums.AllocationStatus;
 import lombok.*;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -31,7 +32,7 @@ public class CostAllocationResponse {
 
     private List<AllocationItemResponse> items;
 
-    private LocalDateTime createdAt;
+    private Instant createdAt;
     @Data
     @Builder
     @NoArgsConstructor

@@ -2,7 +2,6 @@ package com.sba.project.entity;
 import com.sba.project.enums.NotificationType;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
 @Entity
@@ -13,7 +12,7 @@ import java.util.UUID;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
-public class Notification {
+public class Notification extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -41,9 +40,5 @@ public class Notification {
     private String referenceType; 
 
     private UUID branchId;
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
     private LocalDateTime readAt;
 }

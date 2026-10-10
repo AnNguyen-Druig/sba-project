@@ -10,5 +10,7 @@ public interface AppointmentService {
 
     AppointmentResponse changeStatus(UUID appointmentId, AppointmentStatusRequest request);
 
+    void delete(UUID appointmentId);
+
     void assertNoConflict(UUID roomId, LocalDateTime appointmentAt);
 }

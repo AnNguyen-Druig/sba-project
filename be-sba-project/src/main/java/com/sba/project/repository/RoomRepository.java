@@ -25,6 +25,10 @@ public interface RoomRepository extends JpaRepository<Room, UUID> {
      */
     boolean existsByBranch_BranchIdAndRoomCode(UUID branchId, String roomCode);
 
+    @Query(value = "select case when count(*) > 0 then true else false end from rooms where room_type_id = :roomTypeId",
+            nativeQuery = true)
+    boolean existsReferencedByAnyRoom(@Param("roomTypeId") UUID roomTypeId);
+
     /**
      * Danh sách phòng thuộc các Branch mà Owner/Manager được phép quản lý (P1-22, P1-29).
      *

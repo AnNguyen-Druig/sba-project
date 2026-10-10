@@ -2,18 +2,20 @@ package com.sba.project.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
 @Entity
+@SQLRestriction("is_deleted = false")
 @Table(name = "rooms", uniqueConstraints = @UniqueConstraint(columnNames = {"branch_id", "room_code"}))
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Room {
+public class Room extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -46,4 +48,7 @@ public class Room {
 
     @Column(name = "description", columnDefinition = "TEXT")
     private String description;
+
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean default false")
+    private boolean deleted;
 }

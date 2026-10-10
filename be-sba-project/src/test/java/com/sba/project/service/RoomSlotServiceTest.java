@@ -5,7 +5,6 @@ import com.sba.project.dto.response.RoomSlotResponse;
 import com.sba.project.entity.Room;
 import com.sba.project.entity.RoomSlot;
 import com.sba.project.exception.BusinessException;
-import com.sba.project.exception.DuplicateResourceException;
 import com.sba.project.exception.ResourceNotFoundException;
 import com.sba.project.mapper.RoomMapper;
 import com.sba.project.mapper.RoomSlotMapper;
@@ -17,7 +16,6 @@ import com.sba.project.service.impl.RoomServiceImpl;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.dao.DataIntegrityViolationException;
 
 import java.util.List;
 import java.util.Optional;
@@ -25,9 +23,11 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class RoomSlotServiceTest {
@@ -108,12 +108,16 @@ class RoomSlotServiceTest {
     }
 
     @Test
-    void delete_fkViolation_throws409() {
+    void delete_marksSlotDeletedWithoutRemovingRow() {
         UUID id = UUID.randomUUID();
-        when(slotRepository.findById(id)).thenReturn(Optional.of(slot(room.getRoomId(), "B1")));
-        doThrow(new DataIntegrityViolationException("referenced")).when(slotRepository).flush();
+        RoomSlot slot = slot(room.getRoomId(), "B1");
+        when(slotRepository.findById(id)).thenReturn(Optional.of(slot));
 
-        assertThrows(DuplicateResourceException.class, () -> service.deleteRoomSlot(id));
+        service.deleteRoomSlot(id);
+
+        assertTrue(slot.isDeleted());
+        verify(slotRepository, never()).delete(any(RoomSlot.class));
+        verify(slotRepository, never()).flush();
     }
 
     @Test

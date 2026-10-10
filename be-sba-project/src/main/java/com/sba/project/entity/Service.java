@@ -4,17 +4,14 @@ import com.sba.project.enums.ServiceStatus;
 import com.sba.project.enums.ServiceType;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
 import java.util.UUID;
 @Entity
 @Table(name = "services")
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
-public class Service {
+public class Service extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -52,10 +49,4 @@ public class Service {
 
     @Column(nullable = false)
     private UUID createdBy;
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 }

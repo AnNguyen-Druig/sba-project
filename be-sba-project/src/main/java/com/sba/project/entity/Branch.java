@@ -24,7 +24,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Branch {
+public class Branch extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

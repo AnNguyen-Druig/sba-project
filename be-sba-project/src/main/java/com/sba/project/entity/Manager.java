@@ -21,7 +21,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Manager {
+public class Manager extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

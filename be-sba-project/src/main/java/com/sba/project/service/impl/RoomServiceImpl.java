@@ -110,12 +110,8 @@ public class RoomServiceImpl implements RoomService {
     @Transactional
     public void delete(UUID roomId) {
         Room room = requireRoom(roomId);
-        try {
-            roomRepository.delete(room);
-            roomRepository.flush();
-        } catch (DataIntegrityViolationException exception) {
-            throw new DuplicateResourceException("Không thể xóa phòng đang được sử dụng");
-        }
+        roomSlotRepository.findByRoom_RoomId(roomId).forEach(slot -> slot.setDeleted(true));
+        room.setDeleted(true);
     }
 
     @Override
@@ -181,12 +177,7 @@ public class RoomServiceImpl implements RoomService {
     @Transactional
     public void deleteRoomSlot(UUID roomSlotId) {
         RoomSlot roomSlot = requireRoomSlot(roomSlotId);
-        try {
-            roomSlotRepository.delete(roomSlot);
-            roomSlotRepository.flush();
-        } catch (DataIntegrityViolationException exception) {
-            throw new DuplicateResourceException("Không thể xóa slot đang được sử dụng");
-        }
+        roomSlot.setDeleted(true);
     }
 
     @Override
@@ -220,12 +211,10 @@ public class RoomServiceImpl implements RoomService {
     @Transactional
     public void deleteRoomType(UUID roomTypeId) {
         RoomType roomType = requireRoomType(roomTypeId);
-        try {
-            roomTypeRepository.delete(roomType);
-            roomTypeRepository.flush();
-        } catch (DataIntegrityViolationException exception) {
+        if (roomRepository.existsReferencedByAnyRoom(roomTypeId)) {
             throw new DuplicateResourceException("Không thể xóa loại phòng đang được sử dụng");
         }
+        roomType.setDeleted(true);
     }
 
     private Room requireRoom(UUID roomId) {

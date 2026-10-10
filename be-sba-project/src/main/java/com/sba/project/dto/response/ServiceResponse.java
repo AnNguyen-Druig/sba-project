@@ -4,6 +4,7 @@ import com.sba.project.enums.ServiceStatus;
 import com.sba.project.enums.ServiceType;
 import lombok.*;
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 @Data
@@ -32,7 +33,7 @@ public class ServiceResponse {
 
     private UUID branchId;
 
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
-    private LocalDateTime updatedAt;
+    private Instant updatedAt;
 }

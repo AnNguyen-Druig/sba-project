@@ -1,11 +1,8 @@
 package com.sba.project.entity;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.UUID;
 @Entity
 @Table(name = "room_service_charges", uniqueConstraints = {
@@ -14,7 +11,7 @@ import java.util.UUID;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
-public class RoomServiceCharge {
+public class RoomServiceCharge extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -51,10 +48,4 @@ public class RoomServiceCharge {
 
     @Column(nullable = false)
     private UUID createdBy;
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 }

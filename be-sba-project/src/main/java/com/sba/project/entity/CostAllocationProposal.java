@@ -2,8 +2,6 @@ package com.sba.project.entity;
 import com.sba.project.enums.AllocationStatus;
 import jakarta.persistence.*;
 import lombok.*;
-import org.hibernate.annotations.CreationTimestamp;
-import org.hibernate.annotations.UpdateTimestamp;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -14,7 +12,7 @@ import java.util.UUID;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
-public class CostAllocationProposal {
+public class CostAllocationProposal extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
@@ -46,10 +44,4 @@ public class CostAllocationProposal {
     @OneToMany(mappedBy = "proposal", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<CostAllocationItem> items = new ArrayList<>();
-
-    @CreationTimestamp
-    private LocalDateTime createdAt;
-
-    @UpdateTimestamp
-    private LocalDateTime updatedAt;
 }
