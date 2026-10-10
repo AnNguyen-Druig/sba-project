@@ -5,6 +5,10 @@ spring:
     # Run from be-sba-project; keep this optional file outside src/main/resources.
     import: optional:file:./application-local.yml
 
+  security:
+    user:
+      name: admin
+      password: 123456
   datasource:
     # Supabase Session Pooler (5432); include sslmode=require in DB_URL.
     url: ${DB_URL:jdbc:postgresql://aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres?sslmode=require}
