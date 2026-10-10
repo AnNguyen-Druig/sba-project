@@ -2,7 +2,7 @@ package com.sba.project.controller;
 
 import com.sba.project.dto.response.RoomTypeResponse;
 import com.sba.project.exception.ResourceNotFoundException;
-import com.sba.project.service.RoomTypeService;
+import com.sba.project.service.RoomService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -34,12 +34,12 @@ class RoomTypeControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private RoomTypeService roomTypeService;
+    private RoomService roomService;
 
     @Test
     void post_valid_returns201() throws Exception {
         UUID id = UUID.randomUUID();
-        when(roomTypeService.create(any())).thenReturn(response(id));
+        when(roomService.createRoomType(any())).thenReturn(response(id));
 
         mockMvc.perform(post("/api/v1/room-types")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -73,7 +73,7 @@ class RoomTypeControllerTest {
     @Test
     void get_unknownId_returns404() throws Exception {
         UUID id = UUID.randomUUID();
-        when(roomTypeService.getById(id)).thenThrow(new ResourceNotFoundException("not found"));
+        when(roomService.getRoomTypeById(id)).thenThrow(new ResourceNotFoundException("not found"));
 
         mockMvc.perform(get("/api/v1/room-types/{id}", id))
                 .andExpect(status().isNotFound());
@@ -82,8 +82,8 @@ class RoomTypeControllerTest {
     @Test
     void getListAndPut_delegateToService() throws Exception {
         UUID id = UUID.randomUUID();
-        when(roomTypeService.list(any())).thenReturn(new PageImpl<>(List.of(response(id))));
-        when(roomTypeService.update(any(), any())).thenReturn(response(id));
+        when(roomService.listRoomTypes(any())).thenReturn(new PageImpl<>(List.of(response(id))));
+        when(roomService.updateRoomType(any(), any())).thenReturn(response(id));
 
         mockMvc.perform(get("/api/v1/room-types?page=0&size=10"))
                 .andExpect(status().isOk())
@@ -99,7 +99,7 @@ class RoomTypeControllerTest {
     @Test
     void delete_returns204() throws Exception {
         UUID id = UUID.randomUUID();
-        doNothing().when(roomTypeService).delete(id);
+        doNothing().when(roomService).deleteRoomType(id);
 
         mockMvc.perform(delete("/api/v1/room-types/{id}", id))
                 .andExpect(status().isNoContent());

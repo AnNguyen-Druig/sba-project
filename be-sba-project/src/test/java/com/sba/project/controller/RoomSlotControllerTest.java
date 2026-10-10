@@ -1,7 +1,7 @@
 package com.sba.project.controller;
 
 import com.sba.project.dto.response.RoomSlotResponse;
-import com.sba.project.service.RoomSlotService;
+import com.sba.project.service.RoomService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -31,12 +31,12 @@ class RoomSlotControllerTest {
     private MockMvc mockMvc;
 
     @MockitoBean
-    private RoomSlotService roomSlotService;
+    private RoomService roomService;
 
     @Test
     void post_valid_returns201() throws Exception {
         UUID id = UUID.randomUUID();
-        when(roomSlotService.create(any())).thenReturn(response(id));
+        when(roomService.createRoomSlot(any())).thenReturn(response(id));
 
         mockMvc.perform(post("/api/v1/room-slots").contentType(MediaType.APPLICATION_JSON).content(validRequest()))
                 .andExpect(status().isCreated())
@@ -56,7 +56,7 @@ class RoomSlotControllerTest {
     @Test
     void getById_returns200() throws Exception {
         UUID id = UUID.randomUUID();
-        when(roomSlotService.getById(id)).thenReturn(response(id));
+        when(roomService.getRoomSlotById(id)).thenReturn(response(id));
 
         mockMvc.perform(get("/api/v1/room-slots/{id}", id)).andExpect(status().isOk());
     }
@@ -64,7 +64,7 @@ class RoomSlotControllerTest {
     @Test
     void listByRoom_returns200() throws Exception {
         UUID roomId = UUID.randomUUID();
-        when(roomSlotService.listByRoom(roomId)).thenReturn(List.of(response(roomId)));
+        when(roomService.listRoomSlotsByRoom(roomId)).thenReturn(List.of(response(roomId)));
 
         mockMvc.perform(get("/api/v1/rooms/{roomId}/slots", roomId))
                 .andExpect(status().isOk())
@@ -74,7 +74,7 @@ class RoomSlotControllerTest {
     @Test
     void put_returns200() throws Exception {
         UUID id = UUID.randomUUID();
-        when(roomSlotService.update(any(), any())).thenReturn(response(id));
+        when(roomService.updateRoomSlot(any(), any())).thenReturn(response(id));
 
         mockMvc.perform(put("/api/v1/room-slots/{id}", id)
                         .contentType(MediaType.APPLICATION_JSON).content(validRequest()))
@@ -84,7 +84,7 @@ class RoomSlotControllerTest {
     @Test
     void delete_returns204() throws Exception {
         UUID id = UUID.randomUUID();
-        doNothing().when(roomSlotService).delete(id);
+        doNothing().when(roomService).deleteRoomSlot(id);
 
         mockMvc.perform(delete("/api/v1/room-slots/{id}", id)).andExpect(status().isNoContent());
     }

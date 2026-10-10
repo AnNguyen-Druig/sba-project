@@ -5,9 +5,14 @@ import com.sba.project.dto.response.RoomTypeResponse;
 import com.sba.project.entity.RoomType;
 import com.sba.project.exception.DuplicateResourceException;
 import com.sba.project.exception.ResourceNotFoundException;
+import com.sba.project.mapper.RoomMapper;
+import com.sba.project.mapper.RoomSlotMapper;
 import com.sba.project.mapper.RoomTypeMapper;
+import com.sba.project.repository.RoomRepository;
+import com.sba.project.repository.RoomSlotRepository;
 import com.sba.project.repository.RoomTypeRepository;
-import com.sba.project.service.impl.RoomTypeServiceImpl;
+import com.sba.project.service.impl.RoomServiceImpl;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -29,12 +34,13 @@ import static org.mockito.Mockito.when;
 class RoomTypeServiceTest {
 
     private RoomTypeRepository repository;
-    private RoomTypeServiceImpl service;
+    private RoomServiceImpl service;
 
     @BeforeEach
     void setUp() {
         repository = mock(RoomTypeRepository.class);
-        service = new RoomTypeServiceImpl(repository, new RoomTypeMapper());
+        service = new RoomServiceImpl(mock(RoomRepository.class), repository, mock(RoomSlotRepository.class),
+                mock(EntityManager.class), new RoomMapper(), new RoomSlotMapper(), new RoomTypeMapper());
     }
 
     @Test
@@ -46,7 +52,7 @@ class RoomTypeServiceTest {
             return entity;
         });
 
-        RoomTypeResponse response = service.create(request("Studio", 2));
+        RoomTypeResponse response = service.createRoomType(request("Studio", 2));
 
         assertEquals(id, response.getRoomTypeId());
         assertEquals("Studio", response.getTypeName());
@@ -58,7 +64,7 @@ class RoomTypeServiceTest {
         UUID id = UUID.randomUUID();
         when(repository.findById(id)).thenReturn(Optional.of(roomType(id, "Studio")));
 
-        assertEquals("Studio", service.getById(id).getTypeName());
+        assertEquals("Studio", service.getRoomTypeById(id).getTypeName());
     }
 
     @Test
@@ -66,7 +72,7 @@ class RoomTypeServiceTest {
         UUID id = UUID.randomUUID();
         when(repository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> service.getById(id));
+        assertThrows(ResourceNotFoundException.class, () -> service.getRoomTypeById(id));
     }
 
     @Test
@@ -74,7 +80,7 @@ class RoomTypeServiceTest {
         when(repository.findAll(PageRequest.of(0, 10)))
                 .thenReturn(new PageImpl<>(List.of(roomType(UUID.randomUUID(), "Studio"))));
 
-        assertEquals("Studio", service.list(PageRequest.of(0, 10)).getContent().getFirst().getTypeName());
+        assertEquals("Studio", service.listRoomTypes(PageRequest.of(0, 10)).getContent().getFirst().getTypeName());
     }
 
     @Test
@@ -83,7 +89,7 @@ class RoomTypeServiceTest {
         when(repository.findById(id)).thenReturn(Optional.of(roomType(id, "Studio")));
         when(repository.save(any(RoomType.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        RoomTypeResponse response = service.update(id, request("Suite", 3));
+        RoomTypeResponse response = service.updateRoomType(id, request("Suite", 3));
 
         assertEquals("Suite", response.getTypeName());
         assertEquals(3, response.getDefaultCapacity());
@@ -95,7 +101,7 @@ class RoomTypeServiceTest {
         when(repository.findById(id)).thenReturn(Optional.of(roomType(id, "Studio")));
         doThrow(new DataIntegrityViolationException("referenced")).when(repository).flush();
 
-        assertThrows(DuplicateResourceException.class, () -> service.delete(id));
+        assertThrows(DuplicateResourceException.class, () -> service.deleteRoomType(id));
     }
 
     @Test
@@ -103,7 +109,7 @@ class RoomTypeServiceTest {
         UUID id = UUID.randomUUID();
         when(repository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> service.delete(id));
+        assertThrows(ResourceNotFoundException.class, () -> service.deleteRoomType(id));
     }
 
     private RoomTypeRequest request(String name, int capacity) {

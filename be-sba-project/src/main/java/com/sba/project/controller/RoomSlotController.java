@@ -2,7 +2,7 @@ package com.sba.project.controller;
 
 import com.sba.project.dto.request.RoomSlotRequest;
 import com.sba.project.dto.response.RoomSlotResponse;
-import com.sba.project.service.RoomSlotService;
+import com.sba.project.service.RoomService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -24,32 +24,32 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class RoomSlotController {
 
-    private final RoomSlotService roomSlotService;
+    private final RoomService roomService;
 
     @PostMapping("/room-slots")
     public ResponseEntity<RoomSlotResponse> create(@Valid @RequestBody RoomSlotRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(roomSlotService.create(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(roomService.createRoomSlot(request));
     }
 
     @GetMapping("/room-slots/{roomSlotId}")
     public ResponseEntity<RoomSlotResponse> getById(@PathVariable UUID roomSlotId) {
-        return ResponseEntity.ok(roomSlotService.getById(roomSlotId));
+        return ResponseEntity.ok(roomService.getRoomSlotById(roomSlotId));
     }
 
     @GetMapping("/rooms/{roomId}/slots")
     public ResponseEntity<List<RoomSlotResponse>> listByRoom(@PathVariable UUID roomId) {
-        return ResponseEntity.ok(roomSlotService.listByRoom(roomId));
+        return ResponseEntity.ok(roomService.listRoomSlotsByRoom(roomId));
     }
 
     @PutMapping("/room-slots/{roomSlotId}")
     public ResponseEntity<RoomSlotResponse> update(@PathVariable UUID roomSlotId,
                                                    @Valid @RequestBody RoomSlotRequest request) {
-        return ResponseEntity.ok(roomSlotService.update(roomSlotId, request));
+        return ResponseEntity.ok(roomService.updateRoomSlot(roomSlotId, request));
     }
 
     @DeleteMapping("/room-slots/{roomSlotId}")
     public ResponseEntity<Void> delete(@PathVariable UUID roomSlotId) {
-        roomSlotService.delete(roomSlotId);
+        roomService.deleteRoomSlot(roomSlotId);
         return ResponseEntity.noContent().build();
     }
 }

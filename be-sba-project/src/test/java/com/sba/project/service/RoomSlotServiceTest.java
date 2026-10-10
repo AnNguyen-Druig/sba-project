@@ -7,10 +7,14 @@ import com.sba.project.entity.RoomSlot;
 import com.sba.project.exception.BusinessException;
 import com.sba.project.exception.DuplicateResourceException;
 import com.sba.project.exception.ResourceNotFoundException;
+import com.sba.project.mapper.RoomMapper;
 import com.sba.project.mapper.RoomSlotMapper;
+import com.sba.project.mapper.RoomTypeMapper;
 import com.sba.project.repository.RoomRepository;
 import com.sba.project.repository.RoomSlotRepository;
-import com.sba.project.service.impl.RoomSlotServiceImpl;
+import com.sba.project.repository.RoomTypeRepository;
+import com.sba.project.service.impl.RoomServiceImpl;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -30,14 +34,15 @@ class RoomSlotServiceTest {
 
     private RoomSlotRepository slotRepository;
     private RoomRepository roomRepository;
-    private RoomSlotServiceImpl service;
+    private RoomServiceImpl service;
     private Room room;
 
     @BeforeEach
     void setUp() {
         slotRepository = mock(RoomSlotRepository.class);
         roomRepository = mock(RoomRepository.class);
-        service = new RoomSlotServiceImpl(slotRepository, roomRepository, new RoomSlotMapper());
+        service = new RoomServiceImpl(roomRepository, mock(RoomTypeRepository.class), slotRepository,
+                mock(EntityManager.class), new RoomMapper(), new RoomSlotMapper(), new RoomTypeMapper());
         room = Room.builder().roomId(UUID.randomUUID()).build();
     }
 
@@ -46,7 +51,7 @@ class RoomSlotServiceTest {
         when(roomRepository.findById(room.getRoomId())).thenReturn(Optional.of(room));
         when(slotRepository.save(any(RoomSlot.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        RoomSlotResponse response = service.create(request(room.getRoomId(), "B1"));
+        RoomSlotResponse response = service.createRoomSlot(request(room.getRoomId(), "B1"));
 
         assertEquals(room.getRoomId(), response.getRoomId());
         assertEquals("B1", response.getSlotCode());
@@ -57,7 +62,7 @@ class RoomSlotServiceTest {
         UUID roomId = UUID.randomUUID();
         when(roomRepository.findById(roomId)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> service.create(request(roomId, "B1")));
+        assertThrows(ResourceNotFoundException.class, () -> service.createRoomSlot(request(roomId, "B1")));
     }
 
     @Test
@@ -65,7 +70,7 @@ class RoomSlotServiceTest {
         UUID id = UUID.randomUUID();
         when(slotRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> service.getById(id));
+        assertThrows(ResourceNotFoundException.class, () -> service.getRoomSlotById(id));
     }
 
     @Test
@@ -73,7 +78,7 @@ class RoomSlotServiceTest {
         UUID roomId = UUID.randomUUID();
         when(roomRepository.existsById(roomId)).thenReturn(false);
 
-        assertThrows(ResourceNotFoundException.class, () -> service.listByRoom(roomId));
+        assertThrows(ResourceNotFoundException.class, () -> service.listRoomSlotsByRoom(roomId));
     }
 
     @Test
@@ -81,7 +86,7 @@ class RoomSlotServiceTest {
         when(roomRepository.findById(room.getRoomId())).thenReturn(Optional.of(room));
         when(slotRepository.findByRoom_RoomId(room.getRoomId())).thenReturn(List.of(slot(room.getRoomId(), "B1")));
 
-        assertEquals("B1", service.listByRoom(room.getRoomId()).getFirst().getSlotCode());
+        assertEquals("B1", service.listRoomSlotsByRoom(room.getRoomId()).getFirst().getSlotCode());
     }
 
     @Test
@@ -90,7 +95,7 @@ class RoomSlotServiceTest {
         RoomSlot slot = slot(room.getRoomId(), "B1");
         when(slotRepository.findById(id)).thenReturn(Optional.of(slot));
 
-        assertThrows(BusinessException.class, () -> service.update(id, request(UUID.randomUUID(), "B2")));
+        assertThrows(BusinessException.class, () -> service.updateRoomSlot(id, request(UUID.randomUUID(), "B2")));
     }
 
     @Test
@@ -99,7 +104,7 @@ class RoomSlotServiceTest {
         when(slotRepository.findById(id)).thenReturn(Optional.of(slot(room.getRoomId(), "B1")));
         when(slotRepository.save(any(RoomSlot.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
-        assertEquals("B2", service.update(id, request(room.getRoomId(), "B2")).getSlotCode());
+        assertEquals("B2", service.updateRoomSlot(id, request(room.getRoomId(), "B2")).getSlotCode());
     }
 
     @Test
@@ -108,7 +113,7 @@ class RoomSlotServiceTest {
         when(slotRepository.findById(id)).thenReturn(Optional.of(slot(room.getRoomId(), "B1")));
         doThrow(new DataIntegrityViolationException("referenced")).when(slotRepository).flush();
 
-        assertThrows(DuplicateResourceException.class, () -> service.delete(id));
+        assertThrows(DuplicateResourceException.class, () -> service.deleteRoomSlot(id));
     }
 
     @Test
@@ -116,7 +121,7 @@ class RoomSlotServiceTest {
         UUID id = UUID.randomUUID();
         when(slotRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> service.delete(id));
+        assertThrows(ResourceNotFoundException.class, () -> service.deleteRoomSlot(id));
     }
 
     private RoomSlotRequest request(UUID roomId, String code) {

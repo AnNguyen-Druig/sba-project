@@ -2,36 +2,54 @@ package com.sba.project.service.impl;
 
 import com.sba.project.dto.request.RoomRequest;
 import com.sba.project.dto.request.RoomSearchRequest;
+import com.sba.project.dto.request.RoomSlotRequest;
+import com.sba.project.dto.request.RoomTypeRequest;
+import com.sba.project.dto.response.PublicRoomResponse;
 import com.sba.project.dto.response.RoomResponse;
+import com.sba.project.dto.response.RoomSlotResponse;
+import com.sba.project.dto.response.RoomTypeResponse;
 import com.sba.project.entity.Branch;
 import com.sba.project.entity.Manager;
 import com.sba.project.entity.Room;
+import com.sba.project.entity.RoomSlot;
 import com.sba.project.entity.RoomType;
 import com.sba.project.exception.BusinessException;
 import com.sba.project.exception.DuplicateResourceException;
 import com.sba.project.exception.ResourceNotFoundException;
 import com.sba.project.mapper.RoomMapper;
+import com.sba.project.mapper.RoomSlotMapper;
+import com.sba.project.mapper.RoomTypeMapper;
 import com.sba.project.repository.RoomRepository;
+import com.sba.project.repository.RoomSlotRepository;
 import com.sba.project.repository.RoomTypeRepository;
 import com.sba.project.service.RoomService;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class RoomServiceImpl implements RoomService {
 
+    private static final Set<String> ALLOWED_PUBLIC_SORT_PROPERTIES = Set.of("referencePrice", "capacity", "roomCode");
+
     private final RoomRepository roomRepository;
     private final RoomTypeRepository roomTypeRepository;
+    private final RoomSlotRepository roomSlotRepository;
     private final EntityManager entityManager;
     private final RoomMapper roomMapper;
+    private final RoomSlotMapper roomSlotMapper;
+    private final RoomTypeMapper roomTypeMapper;
 
     @Override
     @Transactional
@@ -100,9 +118,124 @@ public class RoomServiceImpl implements RoomService {
         }
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PublicRoomResponse> searchPublicRooms(RoomSearchRequest criteria, Pageable pageable) {
+        if (criteria.getMinPrice() != null && criteria.getMaxPrice() != null
+                && criteria.getMinPrice().compareTo(criteria.getMaxPrice()) > 0) {
+            throw new BusinessException("Giá tối thiểu không được lớn hơn giá tối đa");
+        }
+        validatePublicSort(pageable.getSort());
+        Pageable effectivePageable = pageable.getSort().isUnsorted()
+                ? PageRequest.of(pageable.getPageNumber(), pageable.getPageSize(), Sort.by("roomCode"))
+                : pageable;
+
+        return roomRepository.search(criteria.getBranchId(), criteria.getRoomTypeId(), criteria.getMinPrice(),
+                        criteria.getMaxPrice(), criteria.getMinCapacity(), normalize(criteria.getStatus()),
+                        normalize(criteria.getAddress()), effectivePageable)
+                .map(roomMapper::toPublicResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public PublicRoomResponse getPublicRoomById(UUID roomId) {
+        Room room = roomRepository.findById(roomId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng: " + roomId));
+        return roomMapper.toPublicResponse(room);
+    }
+
+    @Override
+    @Transactional
+    public RoomSlotResponse createRoomSlot(RoomSlotRequest request) {
+        Room room = requireRoom(request.getRoomId());
+        return roomSlotMapper.toResponse(roomSlotRepository.save(roomSlotMapper.toEntity(request, room)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RoomSlotResponse getRoomSlotById(UUID roomSlotId) {
+        return roomSlotMapper.toResponse(requireRoomSlot(roomSlotId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<RoomSlotResponse> listRoomSlotsByRoom(UUID roomId) {
+        requireRoom(roomId);
+        return roomSlotRepository.findByRoom_RoomId(roomId).stream()
+                .map(roomSlotMapper::toResponse)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public RoomSlotResponse updateRoomSlot(UUID roomSlotId, RoomSlotRequest request) {
+        RoomSlot roomSlot = requireRoomSlot(roomSlotId);
+        if (!roomSlot.getRoom().getRoomId().equals(request.getRoomId())) {
+            throw new BusinessException("Không thể chuyển slot sang phòng khác");
+        }
+        roomSlotMapper.updateEntity(roomSlot, request, roomSlot.getRoom());
+        return roomSlotMapper.toResponse(roomSlotRepository.save(roomSlot));
+    }
+
+    @Override
+    @Transactional
+    public void deleteRoomSlot(UUID roomSlotId) {
+        RoomSlot roomSlot = requireRoomSlot(roomSlotId);
+        try {
+            roomSlotRepository.delete(roomSlot);
+            roomSlotRepository.flush();
+        } catch (DataIntegrityViolationException exception) {
+            throw new DuplicateResourceException("Không thể xóa slot đang được sử dụng");
+        }
+    }
+
+    @Override
+    @Transactional
+    public RoomTypeResponse createRoomType(RoomTypeRequest request) {
+        RoomType roomType = roomTypeRepository.save(roomTypeMapper.toEntity(request));
+        return roomTypeMapper.toResponse(roomType);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public RoomTypeResponse getRoomTypeById(UUID roomTypeId) {
+        return roomTypeMapper.toResponse(requireRoomType(roomTypeId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<RoomTypeResponse> listRoomTypes(Pageable pageable) {
+        return roomTypeRepository.findAll(pageable).map(roomTypeMapper::toResponse);
+    }
+
+    @Override
+    @Transactional
+    public RoomTypeResponse updateRoomType(UUID roomTypeId, RoomTypeRequest request) {
+        RoomType roomType = requireRoomType(roomTypeId);
+        roomTypeMapper.updateEntity(roomType, request);
+        return roomTypeMapper.toResponse(roomTypeRepository.save(roomType));
+    }
+
+    @Override
+    @Transactional
+    public void deleteRoomType(UUID roomTypeId) {
+        RoomType roomType = requireRoomType(roomTypeId);
+        try {
+            roomTypeRepository.delete(roomType);
+            roomTypeRepository.flush();
+        } catch (DataIntegrityViolationException exception) {
+            throw new DuplicateResourceException("Không thể xóa loại phòng đang được sử dụng");
+        }
+    }
+
     private Room requireRoom(UUID roomId) {
         return roomRepository.findById(roomId)
                 .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy phòng: " + roomId));
+    }
+
+    private RoomSlot requireRoomSlot(UUID roomSlotId) {
+        return roomSlotRepository.findById(roomSlotId)
+                .orElseThrow(() -> new ResourceNotFoundException("Không tìm thấy slot: " + roomSlotId));
     }
 
     private Branch requireBranch(UUID branchId) {
@@ -134,6 +267,14 @@ public class RoomServiceImpl implements RoomService {
 
     private DuplicateResourceException duplicateRoomCode(String roomCode) {
         return new DuplicateResourceException("Mã phòng đã tồn tại trong chi nhánh: " + roomCode);
+    }
+
+    private void validatePublicSort(Sort sort) {
+        for (Sort.Order order : sort) {
+            if (!ALLOWED_PUBLIC_SORT_PROPERTIES.contains(order.getProperty())) {
+                throw new BusinessException("Không hỗ trợ sắp xếp theo: " + order.getProperty());
+            }
+        }
     }
 
     private String normalize(String value) {

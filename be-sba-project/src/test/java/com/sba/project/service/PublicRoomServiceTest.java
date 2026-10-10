@@ -9,8 +9,13 @@ import com.sba.project.entity.RoomType;
 import com.sba.project.exception.BusinessException;
 import com.sba.project.exception.ResourceNotFoundException;
 import com.sba.project.mapper.RoomMapper;
+import com.sba.project.mapper.RoomSlotMapper;
+import com.sba.project.mapper.RoomTypeMapper;
 import com.sba.project.repository.RoomRepository;
-import com.sba.project.service.impl.PublicRoomServiceImpl;
+import com.sba.project.repository.RoomSlotRepository;
+import com.sba.project.repository.RoomTypeRepository;
+import com.sba.project.service.impl.RoomServiceImpl;
+import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.PageImpl;
@@ -33,7 +38,7 @@ import static org.mockito.Mockito.when;
 class PublicRoomServiceTest {
 
     private RoomRepository roomRepository;
-    private PublicRoomServiceImpl service;
+    private RoomServiceImpl service;
     private Branch branch;
     private RoomType roomType;
     private Room room;
@@ -41,7 +46,8 @@ class PublicRoomServiceTest {
     @BeforeEach
     void setUp() {
         roomRepository = mock(RoomRepository.class);
-        service = new PublicRoomServiceImpl(roomRepository, new RoomMapper());
+        service = new RoomServiceImpl(roomRepository, mock(RoomTypeRepository.class), mock(RoomSlotRepository.class),
+                mock(EntityManager.class), new RoomMapper(), new RoomSlotMapper(), new RoomTypeMapper());
         branch = Branch.builder().branchId(UUID.randomUUID()).branchName("Central").address("Main St").build();
         roomType = RoomType.builder().roomTypeId(UUID.randomUUID()).typeName("Studio").build();
         room = Room.builder().roomId(UUID.randomUUID()).branch(branch)
@@ -55,7 +61,7 @@ class PublicRoomServiceTest {
         when(roomRepository.search(any(), any(), any(), any(), any(), any(), any(), any()))
                 .thenReturn(new PageImpl<>(List.of(room)));
 
-        service.search(RoomSearchRequest.builder().build(), PageRequest.of(0, 10));
+        service.searchPublicRooms(RoomSearchRequest.builder().build(), PageRequest.of(0, 10));
 
         var captor = org.mockito.ArgumentCaptor.forClass(Pageable.class);
         verify(roomRepository).search(any(), any(), any(), any(), any(), any(), any(), captor.capture());
@@ -68,7 +74,7 @@ class PublicRoomServiceTest {
                 .thenReturn(new PageImpl<>(List.of()));
         Pageable pageable = PageRequest.of(0, 10, Sort.by("referencePrice").descending());
 
-        service.search(RoomSearchRequest.builder().build(), pageable);
+        service.searchPublicRooms(RoomSearchRequest.builder().build(), pageable);
 
         verify(roomRepository).search(any(), any(), any(), any(), any(), any(), any(), org.mockito.ArgumentMatchers.eq(pageable));
     }
@@ -77,7 +83,7 @@ class PublicRoomServiceTest {
     void search_disallowedSortProperty_throws400() {
         Pageable pageable = PageRequest.of(0, 10, Sort.by("managerId"));
 
-        assertThrows(BusinessException.class, () -> service.search(RoomSearchRequest.builder().build(), pageable));
+        assertThrows(BusinessException.class, () -> service.searchPublicRooms(RoomSearchRequest.builder().build(), pageable));
     }
 
     @Test
@@ -85,7 +91,7 @@ class PublicRoomServiceTest {
         RoomSearchRequest criteria = RoomSearchRequest.builder()
                 .minPrice(new BigDecimal("200")).maxPrice(new BigDecimal("100")).build();
 
-        assertThrows(BusinessException.class, () -> service.search(criteria, PageRequest.of(0, 10)));
+        assertThrows(BusinessException.class, () -> service.searchPublicRooms(criteria, PageRequest.of(0, 10)));
     }
 
     @Test
@@ -93,14 +99,14 @@ class PublicRoomServiceTest {
         UUID id = UUID.randomUUID();
         when(roomRepository.findById(id)).thenReturn(Optional.empty());
 
-        assertThrows(ResourceNotFoundException.class, () -> service.getById(id));
+        assertThrows(ResourceNotFoundException.class, () -> service.getPublicRoomById(id));
     }
 
     @Test
     void getById_returnsOnlyPublicFields() {
         when(roomRepository.findById(room.getRoomId())).thenReturn(Optional.of(room));
 
-        PublicRoomResponse response = service.getById(room.getRoomId());
+        PublicRoomResponse response = service.getPublicRoomById(room.getRoomId());
 
         assertEquals(branch.getBranchName(), response.getBranchName());
         assertEquals(branch.getAddress(), response.getAddress());

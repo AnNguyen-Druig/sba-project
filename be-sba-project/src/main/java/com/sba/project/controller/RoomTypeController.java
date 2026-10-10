@@ -2,7 +2,7 @@ package com.sba.project.controller;
 
 import com.sba.project.dto.request.RoomTypeRequest;
 import com.sba.project.dto.response.RoomTypeResponse;
-import com.sba.project.service.RoomTypeService;
+import com.sba.project.service.RoomService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -25,32 +25,32 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class RoomTypeController {
 
-    private final RoomTypeService roomTypeService;
+    private final RoomService roomService;
 
     @PostMapping
     public ResponseEntity<RoomTypeResponse> create(@Valid @RequestBody RoomTypeRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(roomTypeService.create(request));
+        return ResponseEntity.status(HttpStatus.CREATED).body(roomService.createRoomType(request));
     }
 
     @GetMapping("/{roomTypeId}")
     public ResponseEntity<RoomTypeResponse> getById(@PathVariable UUID roomTypeId) {
-        return ResponseEntity.ok(roomTypeService.getById(roomTypeId));
+        return ResponseEntity.ok(roomService.getRoomTypeById(roomTypeId));
     }
 
     @GetMapping
     public ResponseEntity<Page<RoomTypeResponse>> list(Pageable pageable) {
-        return ResponseEntity.ok(roomTypeService.list(pageable));
+        return ResponseEntity.ok(roomService.listRoomTypes(pageable));
     }
 
     @PutMapping("/{roomTypeId}")
     public ResponseEntity<RoomTypeResponse> update(@PathVariable UUID roomTypeId,
                                                    @Valid @RequestBody RoomTypeRequest request) {
-        return ResponseEntity.ok(roomTypeService.update(roomTypeId, request));
+        return ResponseEntity.ok(roomService.updateRoomType(roomTypeId, request));
     }
 
     @DeleteMapping("/{roomTypeId}")
     public ResponseEntity<Void> delete(@PathVariable UUID roomTypeId) {
-        roomTypeService.delete(roomTypeId);
+        roomService.deleteRoomType(roomTypeId);
         return ResponseEntity.noContent().build();
     }
 }

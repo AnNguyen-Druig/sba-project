@@ -2,7 +2,7 @@ package com.sba.project.controller;
 
 import com.sba.project.dto.request.RoomSearchRequest;
 import com.sba.project.dto.response.PublicRoomResponse;
-import com.sba.project.service.PublicRoomService;
+import com.sba.project.service.RoomService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -21,16 +21,16 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class PublicRoomController {
 
-    private final PublicRoomService publicRoomService;
+    private final RoomService roomService;
 
     @GetMapping
     public ResponseEntity<Page<PublicRoomResponse>> search(@Valid @ModelAttribute RoomSearchRequest criteria,
                                                            Pageable pageable) {
-        return ResponseEntity.ok(publicRoomService.search(criteria, pageable));
+        return ResponseEntity.ok(roomService.searchPublicRooms(criteria, pageable));
     }
 
     @GetMapping("/{roomId}")
     public ResponseEntity<PublicRoomResponse> getById(@PathVariable UUID roomId) {
-        return ResponseEntity.ok(publicRoomService.getById(roomId));
+        return ResponseEntity.ok(roomService.getPublicRoomById(roomId));
     }
 }

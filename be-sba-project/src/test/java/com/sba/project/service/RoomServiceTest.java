@@ -11,7 +11,10 @@ import com.sba.project.exception.BusinessException;
 import com.sba.project.exception.DuplicateResourceException;
 import com.sba.project.exception.ResourceNotFoundException;
 import com.sba.project.mapper.RoomMapper;
+import com.sba.project.mapper.RoomSlotMapper;
+import com.sba.project.mapper.RoomTypeMapper;
 import com.sba.project.repository.RoomRepository;
+import com.sba.project.repository.RoomSlotRepository;
 import com.sba.project.repository.RoomTypeRepository;
 import com.sba.project.service.impl.RoomServiceImpl;
 import jakarta.persistence.EntityManager;
@@ -50,7 +53,8 @@ class RoomServiceTest {
         roomRepository = mock(RoomRepository.class);
         roomTypeRepository = mock(RoomTypeRepository.class);
         entityManager = mock(EntityManager.class);
-        service = new RoomServiceImpl(roomRepository, roomTypeRepository, entityManager, new RoomMapper());
+        service = new RoomServiceImpl(roomRepository, roomTypeRepository, mock(RoomSlotRepository.class),
+                entityManager, new RoomMapper(), new RoomSlotMapper(), new RoomTypeMapper());
         branch = Branch.builder().branchId(UUID.randomUUID()).branchName("Central").address("Main St").build();
         manager = Manager.builder().managerId(UUID.randomUUID()).build();
         roomType = RoomType.builder().roomTypeId(UUID.randomUUID()).typeName("Studio").build();
