@@ -41,7 +41,7 @@ public class RoomServiceImpl implements RoomService {
         RoomType roomType = requireRoomType(request.getRoomTypeId());
         ensureRoomCodeAvailable(request.getBranchId(), request.getRoomCode());
         try {
-            return roomMapper.toResponse(roomRepository.save(roomMapper.toEntity(request, branch, manager, roomType)));
+            return roomMapper.toResponse(roomRepository.saveAndFlush(roomMapper.toEntity(request, branch, manager, roomType)));
         } catch (DataIntegrityViolationException exception) {
             throw duplicateRoomCode(request.getRoomCode());
         }
@@ -82,7 +82,7 @@ public class RoomServiceImpl implements RoomService {
 
         roomMapper.updateEntity(room, request, branch, manager, roomType);
         try {
-            return roomMapper.toResponse(roomRepository.save(room));
+            return roomMapper.toResponse(roomRepository.saveAndFlush(room));
         } catch (DataIntegrityViolationException exception) {
             throw duplicateRoomCode(request.getRoomCode());
         }

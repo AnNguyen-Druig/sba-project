@@ -60,7 +60,7 @@ class RoomServiceTest {
     void create_ok() {
         RoomRequest request = request(branch, manager, roomType, "A-01");
         stubReferences(request);
-        when(roomRepository.save(any(Room.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roomRepository.saveAndFlush(any(Room.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         RoomResponse response = service.create(request);
 
@@ -82,7 +82,7 @@ class RoomServiceTest {
         Branch otherBranch = Branch.builder().branchId(UUID.randomUUID()).branchName("West").build();
         RoomRequest request = request(otherBranch, manager, roomType, "A-01");
         stubReferences(request);
-        when(roomRepository.save(any(Room.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roomRepository.saveAndFlush(any(Room.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         assertEquals("A-01", service.create(request).getRoomCode());
         verify(roomRepository).existsByBranch_BranchIdAndRoomCode(otherBranch.getBranchId(), "A-01");
@@ -119,7 +119,7 @@ class RoomServiceTest {
     void create_saveRace_throws409() {
         RoomRequest request = request(branch, manager, roomType, "A-01");
         stubReferences(request);
-        when(roomRepository.save(any(Room.class))).thenThrow(new DataIntegrityViolationException("unique"));
+        when(roomRepository.saveAndFlush(any(Room.class))).thenThrow(new DataIntegrityViolationException("unique"));
 
         assertThrows(DuplicateResourceException.class, () -> service.create(request));
     }
@@ -143,10 +143,22 @@ class RoomServiceTest {
         RoomRequest request = request(branch, manager, roomType, "A-01");
         when(roomRepository.findById(id)).thenReturn(Optional.of(existing));
         stubReferences(request);
-        when(roomRepository.save(any(Room.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(roomRepository.saveAndFlush(any(Room.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         assertEquals("A-01", service.update(id, request).getRoomCode());
         verify(roomRepository, never()).existsByBranch_BranchIdAndRoomCode(any(), any());
+    }
+
+    @Test
+    void update_saveRace_throws409() {
+        UUID id = UUID.randomUUID();
+        Room existing = room(id, branch, manager, roomType, "A-01");
+        RoomRequest request = request(branch, manager, roomType, "A-02");
+        when(roomRepository.findById(id)).thenReturn(Optional.of(existing));
+        stubReferences(request);
+        when(roomRepository.saveAndFlush(any(Room.class))).thenThrow(new DataIntegrityViolationException("unique"));
+
+        assertThrows(DuplicateResourceException.class, () -> service.update(id, request));
     }
 
     @Test
