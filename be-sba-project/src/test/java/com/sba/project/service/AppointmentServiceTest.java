@@ -21,8 +21,10 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -134,6 +136,25 @@ class AppointmentServiceTest {
 
         verify(appointmentRepository).existsByRoom_RoomIdAndAppointmentAtAndStatusNotIn(
                 roomId, appointmentAt, Set.of("CANCELLED", "REJECTED"));
+    }
+
+    @Test
+    void delete_existingMarksAppointmentDeletedWithoutRemovingRow() {
+        Appointment appointment = appointment("PENDING");
+        when(appointmentRepository.findById(appointment.getAppointmentId())).thenReturn(Optional.of(appointment));
+
+        service.delete(appointment.getAppointmentId());
+
+        assertTrue(appointment.isDeleted());
+        verify(appointmentRepository, never()).delete(any(Appointment.class));
+    }
+
+    @Test
+    void delete_missingAppointment_throws404() {
+        UUID id = UUID.randomUUID();
+        when(appointmentRepository.findById(id)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> service.delete(id));
     }
 
     private AppointmentStatusRequest status(String status) {
