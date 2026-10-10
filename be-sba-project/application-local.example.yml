@@ -3,6 +3,7 @@
 DB_URL: "jdbc:postgresql://aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres?sslmode=require"
 DB_USERNAME: "postgres.fmzupdyoxtlkxrfdtuly"
 DB_PASSWORD: 'REPLACE_WITH_YOUR_DATABASE_PASSWORD'
+JWT_SECRET: 'REPLACE_WITH_A_RANDOM_SECRET_AT_LEAST_32_BYTES'
 
 # Optional overrides:
 # PORT: 8080
