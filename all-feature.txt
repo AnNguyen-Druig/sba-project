@@ -1,0 +1,370 @@
+ALL-FEATURE.TXT — DANH SÁCH TÍNH NĂNG BACKEND
+DỰ ÁN: WEBSITE QUẢN LÝ PHÒNG TRỌ (SBA301)
+Phiên bản: 1.0 | Ngôn ngữ: Tiếng Việt (UTF-8)
+
+============================================================
+0. PHẠM VI VÀ NGUYÊN TẮC
+============================================================
+
+Nguồn tham chiếu:
+- features.txt do nhóm cung cấp.
+- Conceptual ERD và Logical ERD_Ver2 trong All_Diagrams.drawio (24 entity hiện tại).
+- Bản xuất Stitch (SRS/màn hình): dùng để đối chiếu nghiệp vụ; những mô tả cũ mâu thuẫn với quyết định mới sẽ không được áp dụng.
+- Các xác nhận nghiệp vụ mới nhất của nhóm trong cuộc trao đổi.
+
+Phạm vi tài liệu:
+- CHỈ liệt kê những tính năng, xử lý và quy tắc nghiệp vụ mà BACKEND cần thực hiện.
+- KHÔNG phân công thành viên, KHÔNG đặc tả giao diện, KHÔNG bàn đến cách sửa/bổ sung ERD.
+- Tên nhóm nghiệp vụ bám sát các thực thể hiện hữu: MANAGERS, BRANCHES, ROOM_TYPES, ROOMS, ROOM_SLOTS, TENANTS, APPOINTMENT, BOOKINGS, CONTRACTS, CONTRACT_TENANTS, ROOM_SLOT_OCCUPANCIES, SERVICES, ROOM_SERVICES, ROOM_SERVICE_CHARGES, CONTRACT_SERVICES, INVOICES, INVOICE_ITEMS, PAYMENTS, FURNITURES, FURNITURE_WARRANTIES, REPORT_REQUESTS, REPORT_REQUESTS_SERVICES, REPORT_REQUESTS_FURNITURES, REPORT_RECORDS.
+- Không triển khai khái niệm Brand; Owner quản lý trực tiếp các Branch và Manager của mình.
+- Thứ tự Phase là ưu tiên triển khai, không phải mốc thời gian hay phân chia người làm.
+
+Quy ước Phase:
+- PHASE 1 (P0): BẮT BUỘC làm ngay để chạy được chu trình nghiệp vụ cốt lõi.
+- PHASE 2 (P1): LÀM SAU Phase 1 để nghiệp vụ hoàn thiện, dễ vận hành hơn.
+- PHASE 3 (P2): MỞ RỘNG SÂU, chỉ triển khai nếu nhóm còn dư thời gian.
+
+Vai trò/ngữ cảnh:
+- OWNER: Chủ trọ, có quyền quản lý toàn bộ Branch và Manager thuộc mình.
+- MANAGER: Người quản lý một hoặc nhiều Branch được Owner phân công.
+- TENANT: Người đang/có quan hệ thuê trọ; quyền trên phòng, hợp đồng và hóa đơn phải dựa vào quan hệ thuê thực tế.
+- ADMIN: Quản trị viên cấp hệ thống; ở Phase 3 có thêm kiểm duyệt cộng đồng.
+- GUEST: Khách chưa đăng nhập, được tìm/xem thông tin phòng công khai; không phải mặc định là một tài khoản nội bộ.
+- Người dùng đã đăng nhập nhưng chưa thuê trọ vẫn được thực hiện nghiệp vụ tìm phòng, đặt lịch và gửi yêu cầu giữ phòng theo quyền được cấp.
+- Việc cho một tài khoản mang NHIỀU ROLE đồng thời chưa được nhóm chốt cuối cùng; không mặc định coi đây là yêu cầu bắt buộc. Quy tắc phân quyền cuối cùng phải được thống nhất trước khi hoàn thiện xác thực.
+
+Nguyên tắc chung cho mọi API/backend:
+- Xác thực và phân quyền trên server; không tin dữ liệu owner_id, manager_id, branch_id, tenant_id do client tự khai nếu trái phạm vi truy cập.
+- Validate dữ liệu đầu vào, trạng thái nghiệp vụ, giá trị tiền không âm, thời gian hợp lệ và quyền sở hữu/được phân công.
+- Danh sách hỗ trợ phân trang, lọc, tìm kiếm, sắp xếp phù hợp; không làm lộ dữ liệu riêng tư qua tìm kiếm công khai.
+- Các nghiệp vụ liên quan giữ chỗ, công nợ, thanh toán và cập nhật trạng thái phải đảm bảo tính nhất quán, chống xử lý trùng/lặp.
+- Lưu thời gian và lịch sử cần thiết phục vụ kiểm tra; tiền tệ tính theo VND, hạn chế sai số tính toán.
+
+
+============================================================
+PHASE 1 — CÁC TÍNH NĂNG BACKEND BẮT BUỘC (P0)
+============================================================
+
+1.1. XÁC THỰC, TÀI KHOẢN VÀ PHÂN QUYỀN
+[P1-01] Đăng ký tài khoản Owner bằng email hoặc số điện thoại; kiểm tra trùng và tính hợp lệ.
+[P1-02] Đăng ký tài khoản người dùng tìm phòng (chưa cần là Tenant).
+[P1-03] Đăng nhập bằng email + mật khẩu HOẶC số điện thoại + mật khẩu.
+[P1-04] Đăng xuất, làm mới phiên/access token, vô hiệu hóa phiên không còn hợp lệ.
+[P1-05] Xác minh email/số điện thoại khi kích hoạt tài khoản; giới hạn thời gian và số lần thử mã xác minh.
+[P1-06] Quên mật khẩu, đặt lại/đổi mật khẩu an toàn.
+[P1-07] Xem/cập nhật hồ sơ cá nhân; quản lý trạng thái hoạt động/khóa tài khoản.
+[P1-08] Owner cung cấp thông tin xác minh danh tính; kiểm tra hồ sơ, xác nhận hoặc từ chối kích hoạt quyền Owner bởi quy trình kiểm duyệt phù hợp.
+[P1-09] Owner/Manager tạo hoặc mời tài khoản Manager/Tenant theo quyền; ngăn tạo trùng người dùng không cần thiết.
+[P1-10] Phân quyền OWNER, MANAGER, TENANT, ADMIN và ngữ cảnh GUEST; giới hạn dữ liệu theo Branch, hợp đồng và người thực hiện.
+[P1-11] Kiểm soát truy cập người tìm phòng đã đăng nhập đối với đặt lịch, giữ phòng; cho phép GUEST chỉ đọc dữ liệu công khai.
+[P1-12] Mã hóa/băm mật khẩu, hạn chế thử đăng nhập nhiều lần, bảo vệ thông tin định danh nhạy cảm.
+
+1.2. OWNER — QUẢN LÝ MANAGER VÀ BRANCH
+[P1-13] Owner tạo, xem, cập nhật và ngừng hoạt động Branch; quản lý nhiều Branch trong cùng tài khoản Owner.
+[P1-14] Quản lý thông tin Branch: mã, tên, địa chỉ, mô tả, trạng thái, thông tin liên hệ và nội quy cơ bản.
+[P1-15] Owner tạo/mời, xem, cập nhật thông tin, khóa/mở khóa Manager thuộc phạm vi mình.
+[P1-16] Gán Manager cho Branch; mỗi Branch đang vận hành có đúng 01 Manager phụ trách tại một thời điểm (khi mới khởi tạo có thể chờ phân công).
+[P1-17] Cho phép 01 Manager phụ trách NHIỀU Branch; chuyển Manager giữa các Branch theo phân công của Owner.
+[P1-18] Hủy/chuyển phân công phải cập nhật ngay quyền thao tác của Manager ở Branch cũ/mới.
+[P1-19] Owner được vận hành trực tiếp các nghiệp vụ của Manager trên mọi Branch thuộc mình.
+[P1-20] Xem danh sách Branch/Manager phụ trách và trạng thái vận hành theo phạm vi được phép.
+
+1.3. QUẢN LÝ LOẠI PHÒNG, PHÒNG VÀ CHỖ Ở
+[P1-21] CRUD và quản lý trạng thái Room Type: tên loại, sức chứa mặc định, mô tả, đặc điểm.
+[P1-22] CRUD Room trong Branch: mã phòng, loại phòng, giá tham chiếu, sức chứa, mô tả, trạng thái.
+[P1-23] Không cho trùng mã phòng trong cùng một Branch; chỉ Owner/Manager có quyền mới sửa được phòng.
+[P1-24] Quản lý hai hình thức cho thuê: THUÊ NGUYÊN PHÒNG và THUÊ THEO SLOT/CHỖ.
+[P1-25] CRUD Room Slot: mã slot, tên, tình trạng khả dụng; slot luôn thuộc một phòng xác định.
+[P1-26] Quản lý sức chứa, trạng thái còn chỗ, số chỗ đã có người ở và số chỗ có thể đặt.
+[P1-27] Xác định khả dụng dựa trên hợp đồng/chiếm dụng và yêu cầu giữ chỗ còn hiệu lực, không chỉ dựa vào trạng thái nhập tay.
+[P1-28] Quản lý trạng thái phòng/slot: khả dụng, đang được giữ, đang thuê, đang bảo trì hoặc ngừng khai thác (theo thực tế).
+[P1-29] Lọc/tìm kiếm phòng theo Branch, loại phòng, giá, sức chứa và trạng thái; phân trang danh sách.
+[P1-30] Chặn sửa/xóa/ngừng khai thác làm mất tính nhất quán khi phòng/slot đang có người thuê, booking hoặc nghĩa vụ còn hiệu lực.
+
+1.4. QUẢN LÝ NGƯỜI THUÊ VÀ TÌNH TRẠNG CƯ TRÚ
+[P1-31] Owner/Manager tạo, cập nhật, xem và tìm kiếm thông tin Tenant: họ tên, ngày sinh, liên hệ, giấy tờ định danh, trạng thái.
+[P1-32] Tra cứu danh sách Tenant theo Branch, Room, hợp đồng và trạng thái còn ở/đã rời đi.
+[P1-33] Quản lý quan hệ Tenant tham gia Contract: người đại diện, thành viên, ngày vào/ra dự kiến, ngày ra thực tế.
+[P1-34] Ghi nhận việc bố trí Tenant vào Room Slot và lịch sử chiếm dụng chỗ ở.
+[P1-35] Kiểm tra không vượt quá sức chứa, không cho một slot bị chiếm dụng trùng thời gian trái quy tắc.
+[P1-36] Chỉ cho Tenant xem dữ liệu cá nhân, hợp đồng, phòng và chi phí mà họ có quyền truy cập.
+
+1.5. TÌM KIẾM PHÒNG TRỌ CÔNG KHAI (KHÔNG CÓ BÀI ĐĂNG RIÊNG)
+[P1-37] Cung cấp API công khai danh sách Branch/Room đang được phép hiển thị và có khả năng cho thuê.
+[P1-38] Tìm kiếm/lọc theo khu vực/địa chỉ, mức giá, loại phòng, sức chứa, tình trạng chỗ ở; bổ sung tiêu chí khác nếu có dữ liệu thực tế.
+[P1-39] Trả về chi tiết phòng/Branch: mô tả, giá tham chiếu, trạng thái khả dụng và thông tin liên hệ công khai.
+[P1-40] Phân trang, sắp xếp và lọc nhất quán; không hiển thị thông tin cá nhân Tenant, hợp đồng hoặc công nợ.
+[P1-41] Tìm kiếm/xem chi tiết không cần đăng nhập; các thao tác đặt lịch/giữ phòng phải đăng nhập.
+[P1-42] Dữ liệu tìm kiếm lấy trực tiếp từ Branch, Room, Room Type, Room Slot; KHÔNG xây dựng nghiệp vụ đăng tin riêng.
+
+1.6. ĐẶT LỊCH XEM PHÒNG (APPOINTMENT)
+[P1-43] Người dùng đã đăng nhập tạo yêu cầu xem phòng, chọn phòng và thời điểm dự kiến, gửi ghi chú.
+[P1-44] Owner/Manager xem, xác nhận, đổi lịch hoặc từ chối yêu cầu xem trong Branch được quản lý.
+[P1-45] Người đặt xem lịch hẹn và hủy yêu cầu của mình theo quy tắc trạng thái.
+[P1-46] Kiểm tra phòng còn được phép xem, thời gian hợp lệ, tránh lịch hẹn trùng do quy định vận hành.
+[P1-47] Theo dõi trạng thái: chờ xác nhận, đã xác nhận, đã hoàn thành, đã hủy, từ chối.
+[P1-48] Đặt lịch xem KHÔNG bắt buộc phải xảy ra trước khi gửi yêu cầu giữ phòng.
+
+1.7. YÊU CẦU ĐẶT/GIỮ PHÒNG VÀ TIỀN CỌC (BOOKING)
+[P1-49] Người dùng đã đăng nhập gửi yêu cầu giữ nguyên phòng hoặc giữ một slot còn khả dụng; khai báo ngày dự kiến nhận phòng.
+[P1-50] Tính và thông báo mức tiền cọc phải thanh toán để giữ chỗ theo chính sách được Owner/Manager công bố.
+[P1-51] Owner/Manager xem, chấp thuận/từ chối yêu cầu; Tenant/khách xem trạng thái yêu cầu của mình.
+[P1-52] Sinh hướng dẫn thanh toán tiền cọc giữ phòng và mã tham chiếu giao dịch riêng; xác minh khoản tiền cọc thực nhận.
+[P1-53] Chỉ xác nhận giữ phòng thành công sau khi khoản cọc yêu cầu đã được đối soát hợp lệ.
+[P1-54] Ngăn hai yêu cầu/hợp đồng chiếm giữ trùng một phòng nguyên căn hoặc cùng một slot trong khoảng thời gian xung đột.
+[P1-55] Quy định hạn thanh toán tiền cọc và thời gian hết hiệu lực giữ chỗ; quá hạn thì giải phóng khả dụng theo chính sách.
+[P1-56] Cho phép hủy booking, lưu lý do và tình trạng xử lý tiền cọc/hoàn cọc theo chính sách đã công bố.
+[P1-57] Liên kết booking đã duyệt với bước tạo hợp đồng; không buộc khách đã có hợp đồng mới được đặt.
+[P1-58] Ghi nhận lịch sử chuyển trạng thái booking; chống xử lý đồng thời làm giữ chỗ trùng.
+
+1.8. HỢP ĐỒNG THUÊ TRỌ (BẢN CƠ BẢN)
+[P1-59] Owner/Manager tạo, xem, cập nhật bản nháp và quản lý trạng thái Contract.
+[P1-60] Tạo hợp đồng từ booking phù hợp hoặc tạo hợp đồng quản lý trực tiếp theo quy trình cho thuê.
+[P1-61] Ghi nhận thời hạn thuê, tiền thuê, tiền cọc, điều khoản thanh toán và các điều khoản thuê cơ bản.
+[P1-62] Hợp đồng hỗ trợ đối tượng thuê nguyên phòng hoặc thuê theo slot; ngăn xung đột thuê cùng tài nguyên.
+[P1-63] Thêm/gỡ người tham gia hợp đồng theo quy tắc; mỗi hợp đồng có đúng 01 người đại diện khi bắt đầu có hiệu lực.
+[P1-64] Chuyển trạng thái bản nháp, hiệu lực, hết hạn, đã kết thúc/hủy theo điều kiện nghiệp vụ hợp lệ.
+[P1-65] Tenant được xem hợp đồng của mình; Owner/Manager chỉ xem/sửa hợp đồng thuộc phạm vi quản lý.
+[P1-66] Khi hợp đồng có hiệu lực, cập nhật trạng thái phòng/slot và thông tin người đang cư trú; tránh trùng lịch thuê.
+[P1-67] Ở Phase 1 KHÔNG bắt buộc ký bằng OTP, chữ ký điện tử hoặc tạo file PDF hợp đồng.
+
+1.9. DỊCH VỤ, CẤU HÌNH GIÁ VÀ ĐIỆN/NƯỚC
+[P1-68] Owner/Manager quản lý danh mục Services: tên, đơn vị, cách tính phí, đơn giá tham chiếu, trạng thái.
+[P1-69] Cấu hình dịch vụ và đơn giá áp dụng theo phòng/Branch trong phạm vi phụ trách.
+[P1-70] Điện, nước là dịch vụ mặc định; không cho Tenant tự hủy. Dịch vụ tiêu thụ 0 thì phí theo mức tiêu thụ bằng 0.
+[P1-71] Các dịch vụ bổ sung là tùy chọn; Tenant xem dịch vụ và gửi đăng ký/hủy dịch vụ đã đăng ký.
+[P1-72] Owner/Manager xem và xử lý việc đăng ký/hủy dịch vụ tùy chọn; kiểm tra quyền thuê hợp lệ và kỳ hiệu lực.
+[P1-73] Quản lý dịch vụ áp dụng cho phòng và dịch vụ gắn với hợp đồng; xác định ngày bắt đầu/kết thúc áp dụng.
+[P1-74] Nhập và kiểm tra chỉ số điện/nước đầu kỳ, cuối kỳ; không chấp nhận mức sử dụng âm hoặc dữ liệu bất hợp lệ.
+[P1-75] Tính lượng dùng, đơn giá, tổng tiền cho từng phòng và kỳ thanh toán; hạn chế tính trùng một khoản.
+[P1-76] Tính dịch vụ kiểu theo chỉ số, theo người, theo phòng, cố định hoặc theo lượt theo cấu hình được phép.
+[P1-77] Khi thay đổi đơn giá, chỉ áp dụng cho các kỳ tính phí phù hợp; không tự sửa hóa đơn đã phát hành.
+[P1-78] Cho phép xem lại nguồn gốc số tiền dịch vụ (kỳ tính, chỉ số, số lượng, đơn giá) để đối chiếu.
+
+1.10. PHÂN BỔ CHI PHÍ DỊCH VỤ CHO NGƯỜI Ở GHÉP
+[P1-79] Mặc định chia đều tiền điện/nước theo người đang cư trú trong kỳ; tránh phân bổ cho người không có nghĩa vụ trong kỳ.
+[P1-80] Tenant gửi yêu cầu điều chỉnh tỷ lệ/số tiền điện, nước theo thực tế sử dụng; nêu lý do và phương án chia.
+[P1-81] Manager/Owner xem, chấp thuận hoặc từ chối yêu cầu; ghi nhận phương án phân bổ cuối cùng.
+[P1-82] Tính toán tổng số phân bổ không vượt/thiếu số tiền dịch vụ của phòng; xử lý phần làm tròn VND nhất quán.
+[P1-83] Chỉ phương án được duyệt mới dùng để chốt khoản phải trả; lịch sử đề xuất và duyệt được tra cứu.
+[P1-84] Không tự thay đổi khoản phải trả trong hóa đơn đã chốt khi Tenant yêu cầu chia lại; thực hiện điều chỉnh có kiểm soát nếu được cho phép.
+
+1.11. LẬP HÓA ĐƠN VÀ THEO DÕI CÔNG NỢ
+[P1-85] Owner/Manager lập Invoice theo hợp đồng và kỳ thu tiền; hỗ trợ một lần lập và kiểm soát trùng kỳ.
+[P1-86] Tạo Invoice Items: tiền thuê, điện, nước, dịch vụ tùy chọn, phụ thu/giảm trừ hợp lệ.
+[P1-87] Tính subtotal, điều chỉnh, tổng tiền, hạn thanh toán; kiểm tra tổng các khoản tiền khớp hóa đơn.
+[P1-88] Ghi nhận đơn giá/số lượng/số tiền tại thời điểm phát hành để các hóa đơn cũ không bị đổi khi cập nhật giá.
+[P1-89] Cho phép xem hóa đơn của phòng có nhiều người thuê; chỉ người có quyền mới thấy chi tiết và nghĩa vụ của mình.
+[P1-90] Quản lý phần phải đóng của từng thành viên: số phải trả, đã đóng, còn thiếu; cho phép chỉ người đại diện đóng hoặc từng người tự đóng.
+[P1-91] Cho phép một người thanh toán hộ thành viên khác nhưng phải phân biệt người chuyển tiền với người được ghi giảm công nợ.
+[P1-92] Hỗ trợ thanh toán TỪNG PHẦN, cộng dồn chính xác; không vượt công nợ nếu không có xử lý khoản dư được phê duyệt.
+[P1-93] Trạng thái hóa đơn: chưa thanh toán, thanh toán một phần, đã thanh toán, quá hạn, hủy/điều chỉnh hợp lệ.
+[P1-94] Owner/Manager xem lọc hóa đơn theo Branch, phòng, Tenant, kỳ thu, trạng thái và hạn thanh toán.
+[P1-95] Tenant xem danh sách, chi tiết hóa đơn và số dư còn nợ được phép xem.
+
+1.12. VIETQR VÀ ĐỐI SOÁT THANH TOÁN TỰ ĐỘNG (BẮT BUỘC Ở PHASE 1)
+[P1-96] Owner thiết lập/chọn tài khoản ngân hàng nhận tiền; cho phép chọn cấu hình nhận tiền theo từng Branch.
+[P1-97] Sinh thông tin VietQR kèm số tiền cần chuyển và mã tham chiếu duy nhất cho hóa đơn hoặc tiền cọc booking.
+[P1-98] Tiền chuyển trực tiếp vào tài khoản thuộc quyền kiểm soát của Owner; hệ thống không tự giữ tiền.
+[P1-99] Tích hợp nguồn xác nhận giao dịch thực tế (đơn vị đối soát/API/webhook ngân hàng tương thích) để nhận thông tin chuyển khoản.
+[P1-100] Xác thực nguồn webhook/thông báo giao dịch; không tin yêu cầu tự khai từ người thanh toán.
+[P1-101] Đối chiếu giao dịch theo mã tham chiếu, tài khoản nhận, số tiền và tình trạng nghiệp vụ để ghi nhận đúng Invoice/Booking.
+[P1-102] Chống webhook lặp, chống ghi nhận trùng giao dịch và xử lý trường hợp thông tin thiếu/sai/không khớp.
+[P1-103] Ghi nhận Payment thành công, thất bại, đang xử lý; cập nhật công nợ Invoice/điều kiện giữ chỗ Booking sau đối soát.
+[P1-104] Hỗ trợ một hóa đơn có nhiều lượt chuyển khoản hoặc nhiều người đóng; tổng số tiền đã thu phải được tính chính xác.
+[P1-105] Cung cấp lịch sử giao dịch, thời điểm nhận tiền và trạng thái đối soát cho người có quyền.
+[P1-106] Cho phép Owner/Manager rà soát giao dịch lỗi/không khớp; xác nhận thủ công chỉ là luồng ngoại lệ có quyền hạn và dấu vết, KHÔNG thay thế đối soát tự động P0.
+
+1.13. QUẢN LÝ CSVC VÀ BẢO HÀNH
+[P1-107] Owner/Manager CRUD Furniture/CSVC theo Room: tên, loại, mã tài sản, serial, ngày mua, giá trị, tình trạng, trạng thái.
+[P1-108] Quản lý thông tin bảo hành của từng CSVC: đơn vị bảo hành, thời gian, điều kiện, mã bảo hành.
+[P1-109] Tra cứu CSVC theo phòng, trạng thái, loại tài sản; quản lý lịch sử tình trạng khi có sửa chữa.
+[P1-110] Chặn thao tác xóa hoặc thay đổi tài sản làm mất liên kết với yêu cầu sửa chữa đang xử lý.
+
+1.14. YÊU CẦU SỬA CHỮA VÀ NHẬT KÝ XỬ LÝ
+[P1-111] Tenant có quyền gửi báo hỏng Furniture HOẶC Service của phòng đang thuê (điện, nước, internet...).
+[P1-112] Tạo Report Request: tiêu đề, nội dung, loại yêu cầu, mức độ ưu tiên, phòng liên quan và thông tin minh chứng.
+[P1-113] Cho phép đính kèm và truy xuất hình ảnh trước/sau sửa chữa theo đúng quyền.
+[P1-114] Owner/Manager xem, tiếp nhận, từ chối, bắt đầu xử lý và hoàn thành yêu cầu trong Branch phụ trách.
+[P1-115] Mỗi yêu cầu có một người chịu trách nhiệm xử lý chính tại một thời điểm; tránh cập nhật trạng thái xung đột.
+[P1-116] Lưu NHIỀU lần xử lý Report Records: thời gian, người xử lý, công việc, kết quả, chi phí, trạng thái sau xử lý.
+[P1-117] Phân định trách nhiệm chi phí: Owner chịu hao mòn/hư do CSVC cũ; Tenant chịu khoản hỏng do lỗi Tenant khi được xác nhận.
+[P1-118] Chỉ cộng chi phí Tenant phải trả vào hóa đơn sau khi Owner/Manager duyệt trách nhiệm và số tiền.
+[P1-119] Tenant xem lịch sử/trạng thái yêu cầu của mình; thông báo khi tiếp nhận, cập nhật hoặc hoàn thành.
+
+1.15. ZALO GROUP THEO BRANCH
+[P1-120] Owner/Manager cấu hình, cập nhật, vô hiệu hóa đường dẫn Zalo Group của Branch.
+[P1-121] Kiểm tra định dạng/đường dẫn hợp lệ; chỉ trả link cho người thuê có quan hệ thuê hợp lệ tại Branch.
+[P1-122] Tenant lấy link nhóm Zalo của Branch đang ở; không tích hợp nhắn tin bằng Zalo API ở Phase 1.
+
+1.16. THÔNG BÁO TRONG ỨNG DỤNG
+[P1-123] Tạo thông báo khi có lịch xem phòng, yêu cầu giữ chỗ, tiền cọc, hợp đồng, hóa đơn, thanh toán, yêu cầu sửa chữa và thay đổi quan trọng.
+[P1-124] Gửi thông báo đúng người nhận theo vai trò và phạm vi Branch; không gửi dữ liệu riêng tư cho người không liên quan.
+[P1-125] Người dùng lấy danh sách thông báo, lọc đã đọc/chưa đọc và đánh dấu đã đọc.
+[P1-126] Đảm bảo sự kiện nghiệp vụ không gây gửi thông báo trùng bất hợp lý.
+
+1.17. DASHBOARD, THỐNG KÊ TỐI THIỂU VÀ QUẢN TRỊ
+[P1-127] Owner xem tổng số Branch, phòng/slot, còn trống, đã thuê, đang giữ, đang bảo trì.
+[P1-128] Manager xem số liệu giới hạn trong các Branch được phân công.
+[P1-129] Thống kê tổng tiền phải thu, tiền ĐÃ THU THỰC TẾ, công nợ, hóa đơn quá hạn theo kỳ/Branch.
+[P1-130] Thống kê số booking, hợp đồng hiệu lực, yêu cầu sửa chữa theo trạng thái cơ bản.
+[P1-131] Doanh thu được tính từ khoản thanh toán hợp lệ, không đánh đồng số tiền đã xuất hóa đơn với tiền thực nhận.
+[P1-132] Admin quản lý trạng thái tài khoản và xử lý việc xác minh Owner trong phạm vi quyền hệ thống.
+
+1.18. YÊU CẦU KỸ THUẬT BACKEND BẮT BUỘC CHO P0
+[P1-133] API REST nhất quán, DTO/validation, xử lý lỗi và mã trạng thái phù hợp.
+[P1-134] Phân quyền ở tầng backend trên mọi nghiệp vụ, tránh truy cập chéo Owner/Branch/Tenant.
+[P1-135] Transaction và kiểm soát cạnh tranh với Booking, Contract, Invoice, Payment và công nợ.
+[P1-136] Ghi log nghiệp vụ quan trọng/khả năng tra soát, đặc biệt thay đổi quyền, tiền cọc và giao dịch thanh toán.
+[P1-137] Kiểm thử tự động cho service và API quan trọng; kiểm thử âm tính về quyền, dữ liệu sai, booking trùng và webhook lặp.
+[P1-138] Cấu hình PostgreSQL, môi trường chạy/deploy, tài liệu API và kịch bản dữ liệu demo để giảng viên có thể dùng thử.
+
+
+============================================================
+PHASE 2 — CÁC TÍNH NĂNG HOÀN THIỆN SAU PHASE 1 (P1)
+============================================================
+
+2.1. TÀI KHOẢN, VẬN HÀNH VÀ KIỂM SOÁT
+[P2-01] Quản lý phiên đăng nhập trên nhiều thiết bị; thu hồi toàn bộ phiên khi tài khoản bị khóa/đổi mật khẩu.
+[P2-02] Tra cứu lịch sử đăng nhập, thao tác quan trọng và lịch sử phân công/chuyển Manager.
+[P2-03] Nâng cao quy trình xác minh Owner: bổ sung hồ sơ, yêu cầu xem xét lại, lưu trạng thái từng bước.
+[P2-04] Xuất dữ liệu tổng hợp Owner/Manager/Branch theo phạm vi truy cập.
+
+2.2. QUẢN LÝ PHÒNG, TENANT VÀ LỊCH SỬ CƯ TRÚ
+[P2-05] Quản lý các đợt tạm ngừng khai thác phòng/slot theo khoảng ngày (sửa chữa, vệ sinh, chờ nhận phòng).
+[P2-06] Tự động cảnh báo phòng sắp trống, sắp quá sức chứa và xung đột khả dụng.
+[P2-07] Hỗ trợ chuyển phòng/chuyển slot và lưu đầy đủ lịch sử chuyển chỗ của Tenant.
+[P2-08] Quản lý thay đổi người đại diện hoặc thành viên cùng thuê theo quy trình xét duyệt.
+[P2-09] Xuất danh sách Tenant/cư trú và các dữ liệu phục vụ quản lý hành chính phù hợp.
+
+2.3. APPOINTMENT, BOOKING VÀ TIỀN CỌC NÂNG CAO
+[P2-10] Tự động nhắc lịch hẹn xem phòng, nhắc Manager xác nhận và thống kê lịch hẹn đã/không diễn ra.
+[P2-11] Cho phép đổi lịch theo khung thời gian và giới hạn số lượt đặt lịch theo chính sách Branch.
+[P2-12] Tự động nhắc thanh toán cọc, sắp hết hạn giữ chỗ và kiểm tra booking tồn đọng.
+[P2-13] Hoàn thiện các tình huống hủy/hoàn cọc, khấu trừ, chuyển cọc sang hợp đồng và đối chiếu lịch sử tiền cọc.
+[P2-14] Báo cáo tỷ lệ từ đặt lịch → booking → hợp đồng, cùng nguyên nhân hủy/từ chối.
+
+2.4. HỢP ĐỒNG VÀ KẾT THÚC KỲ THUÊ
+[P2-15] Tìm kiếm/lọc hợp đồng theo Tenant, phòng, Branch, ngày bắt đầu/hết hạn, trạng thái.
+[P2-16] Nhắc hợp đồng sắp hết hạn; gia hạn/điều chỉnh kỳ thuê theo quy trình có kiểm soát.
+[P2-17] Quy trình thông báo trả phòng, kiểm tra tình trạng ở và kết thúc hợp đồng.
+[P2-18] Tính hóa đơn kỳ cuối, công nợ và tiền cọc phải trả/khấu trừ; ghi nhận việc hoàn cọc.
+[P2-19] Ghi nhận biên bản bàn giao/thu hồi CSVC và đối chiếu hư hỏng khi Tenant chuyển đi.
+[P2-20] Khóa các trạng thái không hợp lệ, hạn chế sửa nội dung hợp đồng đã kết thúc; lưu lịch sử thay đổi.
+
+2.5. DỊCH VỤ, ĐỒNG HỒ VÀ CÔNG NỢ NÂNG CAO
+[P2-21] Nhập chỉ số điện/nước hàng loạt theo Branch; phát hiện chỉ số tăng đột biến hoặc thiếu kỳ.
+[P2-22] Cảnh báo sai lệch khi phân bổ chi phí, tự kiểm tra tổng chia tiền điện/nước.
+[P2-23] Tra cứu và so sánh chi phí dịch vụ qua nhiều kỳ, theo phòng và người thuê.
+[P2-24] Tạo hóa đơn định kỳ theo lịch; kiểm tra tránh lập trùng, hỗ trợ duyệt trước khi phát hành.
+[P2-25] Nhắc hóa đơn đến hạn/quá hạn và thống kê tuổi nợ theo khoảng ngày.
+[P2-26] Quy trình điều chỉnh hóa đơn đã phát hành (ghi nhận lý do, người duyệt, khoản bù trừ) mà không sửa âm thầm lịch sử tiền.
+[P2-27] Xử lý chuyển khoản sai nội dung, chuyển khoản dư/thiếu, hoàn tiền và đối soát ngoại lệ nâng cao.
+[P2-28] Xuất hóa đơn/biên nhận dạng file phục vụ tra soát và lưu trữ (khác PDF hợp đồng ký OTP ở Phase 3).
+
+2.6. SỬA CHỮA, CSVC VÀ THÔNG BÁO NÂNG CAO
+[P2-29] Theo dõi tình trạng bảo hành sắp hết hạn và đề xuất xử lý CSVC có nhiều lần hỏng.
+[P2-30] Cấu hình thời hạn xử lý theo mức độ ưu tiên; cảnh báo yêu cầu sửa chữa tồn đọng.
+[P2-31] Tenant đánh giá chất lượng xử lý sau khi yêu cầu sửa chữa hoàn thành.
+[P2-32] Thống kê chi phí sửa chữa theo phòng, Branch, nguyên nhân và bên chịu chi phí.
+[P2-33] Tùy chọn thông báo, tắt/mở từng loại và tổng hợp thông báo theo nhóm sự kiện.
+
+2.7. DASHBOARD, BÁO CÁO VÀ HỖ TRỢ VẬN HÀNH
+[P2-34] Báo cáo doanh thu/công nợ theo tháng, quý, năm; so sánh giữa các Branch của cùng Owner.
+[P2-35] Thống kê tỷ lệ lấp đầy theo nguyên phòng và theo slot; so sánh biến động từng kỳ.
+[P2-36] Thống kê dịch vụ, giá trị tài sản, chi phí sửa chữa và khả năng thu hồi công nợ.
+[P2-37] Xuất báo cáo CSV/Excel phù hợp quyền truy cập.
+[P2-38] Tăng độ bao phủ kiểm thử tích hợp: trọn luồng thuê phòng, tính tiền, thanh toán một phần, trả phòng.
+[P2-39] Tối ưu truy vấn/phân trang, xử lý tác vụ định kỳ và sao lưu/khôi phục vận hành.
+
+
+============================================================
+PHASE 3 — TÍNH NĂNG MỞ RỘNG NẾU CÒN THỜI GIAN (P2)
+============================================================
+
+3.1. THREAD CỘNG ĐỒNG TÌM TRỌ (CHỈ NGƯỜI ĐÃ ĐĂNG NHẬP)
+[P3-01] Người dùng đã đăng nhập tạo, xem, chỉnh sửa, đóng và tra cứu Thread tìm trọ của mình.
+[P3-02] Thread có tiêu đề, mô tả và tiêu chí: khu vực, mức giá, diện tích, sức chứa, tiện ích, thời gian dự kiến chuyển vào (nếu áp dụng).
+[P3-03] Chỉ người đã đăng nhập được XEM hoặc tương tác Thread; Guest không được xem Thread.
+[P3-04] Người dùng đã đăng nhập bình luận vào Thread; quản lý sửa/ẩn bình luận theo quyền.
+[P3-05] Owner/Manager có thể đề xuất những Room/Slot còn khả dụng thuộc Branch mình quản lý.
+[P3-06] Đánh giá mức độ phù hợp theo tiêu chí có cấu trúc; CHO PHÉP GỢI Ý GẦN ĐÚNG, không buộc khớp 100%.
+[P3-07] Hiển thị tiêu chí khớp/chưa khớp và mức độ phù hợp; không trình bày gợi ý gần đúng thành 'đáp ứng đủ điều kiện'.
+[P3-08] Chống gửi lặp đề xuất cùng một phòng tới cùng Thread ngoài các trường hợp được phép cập nhật.
+[P3-09] Khi phòng không còn khả dụng hoặc tiêu chí thay đổi, cập nhật tính phù hợp của đề xuất.
+[P3-10] Người đăng nhận thông báo khi có bình luận/đề xuất; Owner/Manager nhận gợi ý Thread phù hợp phòng trống của mình.
+[P3-11] Cho phép tự đóng Thread theo thời hạn không hoạt động do hệ thống cấu hình.
+
+3.2. KIỂM DUYỆT VÀ BÁO CÁO VI PHẠM THREAD
+[P3-12] Người dùng báo cáo Thread/bình luận vi phạm với lý do và thông tin chứng minh.
+[P3-13] ADMIN xem hàng đợi báo cáo; duyệt, bác bỏ, ẩn nội dung vi phạm và ghi nhận quyết định.
+[P3-14] Tự động đóng Thread theo quy tắc hết hạn, vi phạm hoặc yêu cầu chủ Thread.
+[P3-15] Chống spam, giới hạn tần suất đăng Thread/bình luận/đề xuất; lưu lịch sử xử lý vi phạm.
+[P3-16] Thông báo kết quả kiểm duyệt cho người liên quan theo chính sách hệ thống.
+
+3.3. KÝ HỢP ĐỒNG ĐIỆN TỬ MÔ PHỎNG VÀ PDF
+[P3-17] Sinh PDF hợp đồng từ dữ liệu đã chốt, hỗ trợ tải/xem bản PDF.
+[P3-18] Gửi OTP cho các bên tham gia ký; kiểm tra hiệu lực, số lần thử và đúng người ký.
+[P3-19] Ghi nhận thời điểm, người ký, phiên bản nội dung và bằng chứng xác nhận OTP.
+[P3-20] Quản lý luồng ký phía Tenant và Owner/người được ủy quyền, cập nhật trạng thái chờ ký/đã ký.
+[P3-21] Khóa nội dung đã xác nhận; thay đổi sau ký phải đi qua phiên bản/phụ lục được kiểm soát.
+[P3-22] Hỗ trợ tạo/xác nhận phụ lục, gia hạn, biên bản thanh lý bằng luồng mô phỏng tương tự.
+[P3-23] LƯU Ý: Đây là ký OTP MÔ PHỎNG trong dự án môn học, không mặc nhiên là chữ ký số được chứng nhận có giá trị pháp lý tương đương.
+
+3.4. MOMO VÀ CÁC PHƯƠNG THỨC THANH TOÁN MỞ RỘNG
+[P3-24] Tích hợp MoMo theo điều kiện dịch vụ và tài khoản nhận tiền hợp lệ của Owner.
+[P3-25] Tạo yêu cầu thanh toán, nhận callback/webhook, xác thực chữ ký và đối soát tự động MoMo.
+[P3-26] Hợp nhất lịch sử thanh toán VietQR/MoMo theo hóa đơn, booking, người nộp và trạng thái thực thu.
+[P3-27] Đối soát giao dịch thất bại/hủy/hoàn tiền và xử lý webhook lặp, đến trễ hoặc khác thứ tự.
+
+3.5. NOTIFICATION NGOÀI ỨNG DỤNG
+[P3-28] Gửi email thông báo hóa đơn, thanh toán, lịch hẹn, hợp đồng và nhắc hạn theo cấu hình.
+[P3-29] Gửi SMS/OTP hoặc thông báo qua dịch vụ tích hợp bên thứ ba khi được triển khai.
+[P3-30] Quản lý mẫu thông báo, lựa chọn kênh, retry và trạng thái gửi thất bại.
+
+3.6. XÁC MINH DANH TÍNH VÀ TÌM PHÒNG NÂNG CAO
+[P3-31] Tích hợp eKYC với nhà cung cấp xác minh danh tính thực tế cho Owner khi nhóm chọn được giải pháp phù hợp.
+[P3-32] Theo dõi kết quả xác minh, chống giả mạo yêu cầu xác minh và bảo vệ dữ liệu giấy tờ.
+[P3-33] Gợi ý phòng tương tự cho người tìm trọ dựa trên tiêu chí và dữ liệu phòng công khai; có thể giải thích nguyên nhân phù hợp.
+[P3-34] Tăng cường tìm kiếm theo tiện ích, vị trí và ưu tiên gợi ý phù hợp, chỉ khi có dữ liệu đáng tin cậy.
+
+
+============================================================
+4. QUY TẮC XUYÊN SUỐT CẦN DUY TRÌ
+============================================================
+
+[BR-01] KHÔNG sử dụng Brand. OWNER quản lý trực tiếp các Branch, Manager của mình.
+[BR-02] Mỗi Branch đang vận hành có đúng 01 Manager phụ trách tại một thời điểm; 01 Manager có thể quản lý nhiều Branch.
+[BR-03] Phân quyền dựa cả vào vai trò VÀ quan hệ quản lý/thuê thực tế; không dựa duy nhất vào tên role.
+[BR-04] Guest được tìm/xem phòng công khai; đặt lịch, booking, Thread (Phase 3) cần đăng nhập.
+[BR-05] Không có chức năng tạo bài đăng nhà trọ riêng; danh sách tìm phòng lấy từ dữ liệu quản lý phòng/cơ sở.
+[BR-06] Hỗ trợ cả thuê nguyên phòng và thuê từng chỗ; không cho thuê/giữ trùng tài nguyên ở cùng thời điểm.
+[BR-07] Đặt lịch xem và booking là hai nghiệp vụ độc lập; có thể đặt phòng mà không cần xem trước.
+[BR-08] Booking chỉ trở thành giữ chỗ thành công sau khi xác nhận thực nhận đủ khoản cọc theo chính sách.
+[BR-09] Điện/nước luôn sẵn như dịch vụ mặc định; không tiêu thụ thì không tính tiền theo lượng dùng.
+[BR-10] Tenant được yêu cầu đăng ký/hủy dịch vụ TÙY CHỌN, không được hủy dịch vụ điện/nước mặc định.
+[BR-11] Chi phí điện/nước mặc định chia đều theo người có nghĩa vụ; thay đổi tỷ lệ cần Tenant đề xuất và Manager/Owner duyệt.
+[BR-12] Giá dịch vụ thay đổi không sửa số tiền hóa đơn đã phát hành.
+[BR-13] Hóa đơn có thể thanh toán từng phần; thành viên tự trả hoặc đại diện trả thay và phải theo dõi chính xác công nợ từng người.
+[BR-14] Phase 1 bắt buộc đối soát chuyển khoản VietQR THỰC TẾ; giao dịch chưa xác nhận không tự đánh dấu đã trả.
+[BR-15] Tài khoản nhận tiền thuộc Owner; có thể cấu hình khác nhau cho từng Branch.
+[BR-16] Tenant được báo hỏng Furniture/Service; mỗi yêu cầu có lịch sử nhiều lần xử lý và ảnh minh chứng.
+[BR-17] CSVC hao mòn/cũ do Owner chịu; lỗi Tenant gây ra chỉ tính vào hóa đơn khi Manager/Owner duyệt.
+[BR-18] Phase 1 hợp đồng CRUD/quản lý trạng thái; Phase 3 mới làm ký OTP mô phỏng và PDF hợp đồng.
+[BR-19] Thread chỉ có ở Phase 3; người chưa đăng nhập không được xem, gợi ý phòng có thể khớp gần đúng.
+[BR-20] ADMIN có chức năng xử lý báo cáo vi phạm/ẩn/đóng Thread khi làm Phase 3.
+
+
+============================================================
+5. CÁC CHÍNH SÁCH NHÓM CẦN CHỐT KHI TRIỂN KHAI
+============================================================
+
+- Một người có thể mang nhiều role đồng thời hay chỉ chọn một vai trò tại một thời điểm; không được mặc định quyết định này đã được chốt.
+- Thời hạn thanh toán tiền cọc, thời hạn giữ phòng, mức cọc, điều kiện hủy/hoàn/khấu trừ.
+- Cách tính số người ở thực tế trong kỳ khi chia điện/nước (ví dụ Tenant vào/ra giữa kỳ).
+- Ai được chốt/phát hành hóa đơn; điều kiện sửa, hủy hoặc điều chỉnh hóa đơn đã phát hành.
+- Quy tắc tiền chuyển thừa/thiếu, đóng hộ, khoản chưa khớp và thời hạn xử lý ngoại lệ đối soát.
+- Phạm vi phân quyền xác minh Owner và mức độ xác thực yêu cầu trước khi mở quyền vận hành.
+- Giới hạn đăng Thread, thời hạn tự đóng, quy tắc kiểm duyệt khi triển khai Phase 3.
+
+KẾT THÚC FILE — Đây là danh sách chức năng Backend theo thứ tự ưu tiên, chưa phải tài liệu thiết kế Database hay giao diện.

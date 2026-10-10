@@ -11,3 +11,7 @@ spring:
     hibernate:
       # Only the disposable in-memory test database is created/dropped.
       ddl-auto: create-drop
+
+app:
+  jwt:
+    secret: test-only-jwt-secret-not-for-deployment-0123456789abcdef
