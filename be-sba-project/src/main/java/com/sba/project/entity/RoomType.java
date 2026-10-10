@@ -2,10 +2,12 @@ package com.sba.project.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.util.UUID;
 
 @Entity
+@SQLRestriction("is_deleted = false")
 @Table(name = "room_types")
 @Getter
 @Setter
@@ -30,4 +32,7 @@ public class RoomType extends BaseEntity {
 
     @Column(name = "features", columnDefinition = "TEXT")
     private String features;
+
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean not null default false")
+    private boolean deleted;
 }

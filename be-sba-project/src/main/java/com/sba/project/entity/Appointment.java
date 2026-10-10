@@ -2,11 +2,13 @@ package com.sba.project.entity;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.SQLRestriction;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Entity
+@SQLRestriction("is_deleted = false")
 @Table(name = "appointment")
 @Getter
 @Setter
@@ -36,4 +38,7 @@ public class Appointment extends BaseEntity {
 
     @Column(name = "note", columnDefinition = "TEXT")
     private String note;
+
+    @Column(name = "is_deleted", nullable = false, columnDefinition = "boolean not null default false")
+    private boolean deleted;
 }
