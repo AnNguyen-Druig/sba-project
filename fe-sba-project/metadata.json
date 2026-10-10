@@ -1,0 +1,6 @@
+{
+  "name": "TroPro - Quản lý Nhà trọ & Cổng Tìm Trọ Minh Bạch",
+  "description": "Nền tảng quản lý vận hành nhà trọ thông minh, sơ đồ phòng trực quan, hợp đồng điện tử OTP, thu phí VietQR và cổng tìm trọ trực tiếp chính chủ không môi giới.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
