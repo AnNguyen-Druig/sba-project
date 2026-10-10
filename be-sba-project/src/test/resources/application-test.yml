@@ -1,0 +1,13 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:sba-project-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1
+    username: sa
+    password: ""
+    driver-class-name: org.h2.Driver
+    hikari:
+      maximum-pool-size: 2
+      minimum-idle: 0
+  jpa:
+    hibernate:
+      # Only the disposable in-memory test database is created/dropped.
+      ddl-auto: create-drop

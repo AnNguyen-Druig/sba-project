@@ -1,0 +1,57 @@
+spring:
+  application:
+    name: sba-project
+  config:
+    # Run from be-sba-project; keep this optional file outside src/main/resources.
+    import: optional:file:./application-local.yml
+
+  datasource:
+    # Supabase Session Pooler (5432); include sslmode=require in DB_URL.
+    url: ${DB_URL:jdbc:postgresql://aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres?sslmode=require}
+    username: ${DB_USERNAME:postgres.fmzupdyoxtlkxrfdtuly}
+    password: ${DB_PASSWORD:HtD22012005*#@}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      # Each running backend has its own pool; budget for all team members.
+      maximum-pool-size: ${DB_POOL_MAX_SIZE:5}
+      minimum-idle: ${DB_POOL_MIN_IDLE:1}
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    open-in-view: false
+    show-sql: false
+    hibernate:
+      # Shared database: check mappings without creating/altering/dropping tables.
+      ddl-auto: update
+    properties:
+      hibernate:
+        default_schema: public
+        jdbc:
+          time_zone: UTC
+  sql:
+    init:
+      mode: never
+
+  servlet:
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+
+  web:
+    error:
+      include-message: never
+      include-binding-errors: never
+      include-stacktrace: never
+      include-exception: false
+
+server:
+  port: ${PORT:8080}
+  # Controllers already declare /api/v1; do not duplicate it as context-path.
+
+logging:
+  level:
+    root: INFO
+    com.sba.project: ${APP_LOG_LEVEL:INFO}
