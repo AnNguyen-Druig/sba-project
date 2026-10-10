@@ -15,7 +15,6 @@ import com.sba.project.service.impl.RoomServiceImpl;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 
@@ -25,21 +24,24 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class RoomTypeServiceTest {
 
     private RoomTypeRepository repository;
+    private RoomRepository roomRepository;
     private RoomServiceImpl service;
 
     @BeforeEach
     void setUp() {
         repository = mock(RoomTypeRepository.class);
-        service = new RoomServiceImpl(mock(RoomRepository.class), repository, mock(RoomSlotRepository.class),
+        roomRepository = mock(RoomRepository.class);
+        service = new RoomServiceImpl(roomRepository, repository, mock(RoomSlotRepository.class),
                 mock(EntityManager.class), new RoomMapper(), new RoomSlotMapper(), new RoomTypeMapper());
     }
 
@@ -99,9 +101,24 @@ class RoomTypeServiceTest {
     void delete_whenReferenced_throws409() {
         UUID id = UUID.randomUUID();
         when(repository.findById(id)).thenReturn(Optional.of(roomType(id, "Studio")));
-        doThrow(new DataIntegrityViolationException("referenced")).when(repository).flush();
+        when(roomRepository.existsReferencedByAnyRoom(id)).thenReturn(true);
 
         assertThrows(DuplicateResourceException.class, () -> service.deleteRoomType(id));
+        verify(repository, never()).delete(any(RoomType.class));
+    }
+
+    @Test
+    void delete_unreferenced_marksTypeDeletedWithoutRemovingRow() {
+        UUID id = UUID.randomUUID();
+        RoomType roomType = roomType(id, "Studio");
+        when(repository.findById(id)).thenReturn(Optional.of(roomType));
+        when(roomRepository.existsReferencedByAnyRoom(id)).thenReturn(false);
+
+        service.deleteRoomType(id);
+
+        assertTrue(roomType.isDeleted());
+        verify(repository, never()).delete(any(RoomType.class));
+        verify(repository, never()).flush();
     }
 
     @Test
