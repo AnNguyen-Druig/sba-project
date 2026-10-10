@@ -21,7 +21,9 @@ public interface ServiceRepository extends JpaRepository<Service, UUID> {
     @Query("SELECT s FROM Service s WHERE s.branchId = :branchId " +
            "AND (:status IS NULL OR s.status = :status) " +
            "AND (:serviceType IS NULL OR s.serviceType = :serviceType) " +
-           "AND (:keyword IS NULL OR LOWER(s.name) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+           "AND (:keyword IS NULL OR LOWER(s.name) LIKE LOWER(CONCAT('%', CAST(:keyword AS string), '%')))")
+
+
     Page<Service> searchServices(
         @Param("branchId") UUID branchId,
         @Param("status") ServiceStatus status,
