@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/auth-context';
 import { useToast } from '../../components/common/Toast';
 import LoginForm from '../../components/auth/LoginForm';
@@ -83,6 +83,12 @@ const LoginPage = () => {
 
       <LoginForm onSubmit={handleLogin} loading={loading} />
 
+      <p style={{ textAlign: 'center', marginTop: 20, fontSize: 13, color: '#666' }}>
+        Chưa có tài khoản?{' '}
+        <Link to="/register" style={{ color: '#00b14f', fontWeight: 700, textDecoration: 'none' }}>
+          Đăng ký ngay
+        </Link>
+      </p>
     </AuthCard>
   );
 };
