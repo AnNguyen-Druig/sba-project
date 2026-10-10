@@ -12,7 +12,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class RoomType {
+public class RoomType extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

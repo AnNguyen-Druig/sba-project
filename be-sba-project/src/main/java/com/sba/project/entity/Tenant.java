@@ -22,7 +22,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class Tenant {
+public class Tenant extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)

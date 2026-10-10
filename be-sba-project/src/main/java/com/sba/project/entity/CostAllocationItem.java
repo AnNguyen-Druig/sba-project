@@ -8,7 +8,7 @@ import java.util.UUID;
 @Getter @Setter
 @NoArgsConstructor @AllArgsConstructor
 @Builder
-public class CostAllocationItem {
+public class CostAllocationItem extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.UUID)
