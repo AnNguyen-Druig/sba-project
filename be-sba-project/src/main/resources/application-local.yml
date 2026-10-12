@@ -1,0 +1,9 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+  jpa:
+    show-sql: ${JPA_SHOW_SQL:false}
+logging:
+  level:
+    org.hibernate.SQL: ${HIBERNATE_SQL_LOG_LEVEL:WARN}

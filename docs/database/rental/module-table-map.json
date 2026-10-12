@@ -1,0 +1,56 @@
+{
+  "identity": [
+    "users",
+    "roles",
+    "user_roles",
+    "owner_managers"
+  ],
+  "property": [
+    "branches",
+    "branch_policies",
+    "room_types",
+    "rooms",
+    "room_slots"
+  ],
+  "leasing": [
+    "appointments",
+    "bookings",
+    "contracts",
+    "contract_tenants",
+    "resource_allocations",
+    "room_slot_occupancies",
+    "contract_amendments"
+  ],
+  "utilities": [
+    "services",
+    "room_services",
+    "contract_services",
+    "room_service_charges",
+    "cost_allocation_proposals"
+  ],
+  "billing": [
+    "invoices",
+    "invoice_items"
+  ],
+  "payment": [
+    "payments",
+    "payment_webhook_events"
+  ],
+  "maintenance": [
+    "furnitures",
+    "furniture_warranties",
+    "report_requests",
+    "report_requests_services",
+    "report_requests_furnitures",
+    "report_records"
+  ],
+  "notification": [
+    "notifications"
+  ],
+  "community": [
+    "threads"
+  ],
+  "common.audit": [
+    "audit_logs"
+  ]
+}

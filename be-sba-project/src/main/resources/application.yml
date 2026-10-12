@@ -1,69 +1,30 @@
 spring:
   application:
     name: sba-project
-  config:
-    # Run from be-sba-project; keep this optional file outside src/main/resources.
-    import: optional:file:./application-local.yml
-
-  security:
-    user:
-      name: admin
-      password: 123456
   datasource:
-    # Supabase Session Pooler (5432); include sslmode=require in DB_URL.
-    url: ${DB_URL:jdbc:postgresql://aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres?sslmode=require}
-    username: ${DB_USERNAME:postgres.fmzupdyoxtlkxrfdtuly}
-    password: ${DB_PASSWORD:HtD22012005*#@}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
-    hikari:
-      # Each running backend has its own pool; budget for all team members.
-      maximum-pool-size: ${DB_POOL_MAX_SIZE:5}
-      minimum-idle: ${DB_POOL_MIN_IDLE:1}
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
-
   jpa:
     open-in-view: false
     show-sql: false
     hibernate:
-      # Shared database: check mappings without creating/altering/dropping tables.
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
-        default_schema: public
+        default_schema: rental
         jdbc:
           time_zone: UTC
   sql:
     init:
       mode: never
-
-  servlet:
-    encoding:
-      charset: UTF-8
-      enabled: true
-      force: true
-
-  web:
-    error:
-      include-message: never
-      include-binding-errors: never
-      include-stacktrace: never
-      include-exception: false
-
+  flyway:
+    enabled: false
 server:
-  port: ${PORT:8080}
-  # Controllers already declare /api/v1; do not duplicate it as context-path.
-
+  port: ${SERVER_PORT:8080}
 logging:
   level:
     root: INFO
-    com.sba.project: ${APP_LOG_LEVEL:INFO}
-
-app:
-  jwt:
-    secret: ${JWT_SECRET}
-    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
-    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
-  cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:5173}
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: 'OFF'
