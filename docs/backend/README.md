@@ -51,7 +51,9 @@ Xem [checklist đủ 34 entity](ENTITY_MAPPING.md), [quy tắc code](../coding_r
 - Audit do trigger quản lý. `AuditLog` dùng `@Immutable`; không có service ghi audit. Entity immutable vẫn không thay thế quyền database.
 - `User` không có `toString()` chứa thuộc tính; password/refresh/challenge hash có `@JsonIgnore`. Không trả entity trực tiếp qua API khi ghép nghiệp vụ.
 
-`ApiResponse<T>` giữ đúng `status/message/data` và hai hàm `success` người dùng cung cấp. `PagedResponse<T>` giữ nguyên nội dung được cung cấp, chỉ đổi package: **number bắt đầu từ 1**, trong khi `PageRequest` bắt đầu từ 0; các hàm next/previous có thể trả null tại biên. Trước khi dùng trong API cần thống nhất adapter phân trang và validate `pageSize > 0`; không truyền trực tiếp PagedResponse như một Spring Page có quy ước zero-based.
+`ApiResponse<T>` giữ `status/message/data` và hai hàm `success`, bổ sung `code` để thống nhất với GlobalExceptionHandler: thành công `code=0`, lỗi ứng dụng từ `1000`. Xem [contract response và mã lỗi](ERROR_RESPONSES.md).
+
+`PagedResponse<T>` giữ nguyên nội dung được cung cấp, chỉ đổi package: **number bắt đầu từ 1**, trong khi `PageRequest` bắt đầu từ 0; các hàm next/previous có thể trả null tại biên. Trước khi dùng trong API cần thống nhất adapter phân trang và validate `pageSize > 0`; không truyền trực tiếp PagedResponse như một Spring Page có quy ước zero-based.
 
 ## Cấu hình và chạy local
 

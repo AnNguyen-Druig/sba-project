@@ -321,6 +321,7 @@ Page<Product> products =
 - Sử dụng `@RestControllerAdvice` với `GlobalExceptionHandler` trong `common.exceptions` để xử lý lỗi tập trung.
 - Các lỗi nghiệp vụ cần dùng custom exception và mã lỗi (error code) thống nhất, thay vì ném `RuntimeException` chung chung hoặc tự tạo nội dung lỗi tùy ý.
 - Chuẩn hóa error response bằng `ApiResponse<T>` trong package `common.base` (theo cấu trúc đã thống nhất của dự án).
+- Contract hiện hành: `status` là HTTP status; `code=0` khi thành công, mã lỗi ứng dụng từ `1000`, không trùng nhau; `message` là thông báo công khai; `data` chứa payload. Xem [quy ước response và mã lỗi](backend/ERROR_RESPONSES.md).
 - Không đặt nhiều khối `try-catch` trùng lặp trong Controller chỉ để chuyển lỗi thành HTTP response; chỉ bắt exception cục bộ khi thực sự cần khôi phục hoặc xử lý khác biệt.
 - Không trả stack trace, SQL statement hoặc thông tin nội bộ nhạy cảm cho client. Lỗi hệ thống cần được ghi log phù hợp để hỗ trợ debug.
 
