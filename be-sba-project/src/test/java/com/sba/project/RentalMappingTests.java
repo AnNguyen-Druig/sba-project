@@ -1,6 +1,7 @@
 package com.sba.project;
 
 import com.sba.project.common.base.BaseEntity;
+import com.sba.project.modules.identity.entity.InvalidatedToken;
 import com.sba.project.modules.identity.entity.OwnerManagerId;
 import com.sba.project.modules.identity.entity.User;
 import com.sba.project.modules.identity.entity.UserRoleId;
@@ -38,7 +39,8 @@ class RentalMappingTests {
         scanner.addIncludeFilter(new AnnotationTypeFilter(Entity.class));
         entities = new ArrayList<>();
         for (var candidate : scanner.findCandidateComponents("com.sba.project")) {
-            entities.add(Class.forName(candidate.getBeanClassName()));
+            Class<?> entityClass = Class.forName(candidate.getBeanClassName());
+            if (entityClass != InvalidatedToken.class) entities.add(entityClass);
         }
         registry = new StandardServiceRegistryBuilder()
                 .applySetting("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect")

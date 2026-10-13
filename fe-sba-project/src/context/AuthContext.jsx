@@ -1,65 +1,91 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { authApi } from '../api/authApi';
-import { clearAuthTokens, refreshAccessToken, setAccessToken } from '../api/authSession';
+import {
+  clearAuthTokens,
+  clearLegacyRefreshToken,
+  getAccessToken,
+  setAccessToken,
+} from '../api/authSession';
 import { AuthContext } from './auth-context';
 
+const readStoredUser = () => {
+  try {
+    return JSON.parse(localStorage.getItem('user') || 'null');
+  } catch {
+    localStorage.removeItem('user');
+    return null;
+  }
+};
+
 export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const [accessToken, setCurrentAccessToken] = useState(() => getAccessToken());
+  const [user, setUser] = useState(() => readStoredUser());
 
   useEffect(() => {
-    const initializeSession = async () => {
-      if (!localStorage.getItem('token')) {
-        clearAuthTokens();
-        localStorage.removeItem('user');
-        setLoading(false);
-        return;
-      }
-
-      try {
-        const data = await refreshAccessToken();
-        setUser(data.account);
-        localStorage.setItem('user', JSON.stringify(data.account));
-      } catch {
-        setUser(null);
-      } finally {
-        setLoading(false);
-      }
+    clearLegacyRefreshToken();
+    const handleExpired = () => {
+      clearAuthTokens();
+      localStorage.removeItem('user');
+      setCurrentAccessToken(null);
+      setUser(null);
     };
-
-    initializeSession();
+    const handleAccessTokenUpdate = () => setCurrentAccessToken(getAccessToken());
+    window.addEventListener('auth:session-expired', handleExpired);
+    window.addEventListener('auth:access-token-updated', handleAccessTokenUpdate);
+    return () => {
+      window.removeEventListener('auth:session-expired', handleExpired);
+      window.removeEventListener('auth:access-token-updated', handleAccessTokenUpdate);
+    };
   }, []);
 
-  const login = useCallback(async (credentials) => {
-    const res = await authApi.login(credentials);
-    const data = res.data?.data || res.data;
-    const { accessToken, refreshToken, account: userData } = data;
-    clearAuthTokens();
-    setAccessToken(accessToken);
-    if (refreshToken) localStorage.setItem('token', refreshToken);
+  const saveSession = useCallback((response) => {
+    const data = response.data?.data || response.data;
+    localStorage.removeItem('refreshToken');
+    setAccessToken(data.accessToken);
+    setCurrentAccessToken(data.accessToken);
+    const userData = {
+      id: data.accountId,
+      email: data.email,
+      fullName: data.fullName,
+      role: data.role,
+    };
     localStorage.setItem('user', JSON.stringify(userData));
     setUser(userData);
     return userData;
   }, []);
 
+  const login = useCallback(async (credentials) => {
+    const response = await authApi.login(credentials);
+    return saveSession(response);
+  }, [saveSession]);
+
+  const register = useCallback(async (registration) => {
+    const response = await authApi.register(registration);
+    return saveSession(response);
+  }, [saveSession]);
+
   const logout = useCallback(async () => {
     try {
-      await refreshAccessToken();
-      await authApi.logout({ refreshToken: localStorage.getItem('token') });
-    } catch {
-      // ignore errors on logout
+      await authApi.logout();
     } finally {
       clearAuthTokens();
       localStorage.removeItem('user');
+      setCurrentAccessToken(null);
       setUser(null);
     }
   }, []);
 
-  const isAuthenticated = !!user;
-
   return (
     <AuthContext.Provider
-      value={{ user, loading, isAuthenticated, login, logout }}
+      value={{
+        user,
+        accessToken,
+        loading: false,
+        isAuthenticated: Boolean(accessToken && user),
+        login,
+        register,
+        logout,
+      }}
     >
       {children}
     </AuthContext.Provider>

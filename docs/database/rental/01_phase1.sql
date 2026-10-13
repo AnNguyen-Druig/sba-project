@@ -28,8 +28,7 @@ CREATE TABLE users (
  auth_version bigint NOT NULL DEFAULT 0,
  created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(),
  CHECK(status='INVITED' OR email IS NOT NULL OR phone IS NOT NULL),
- CHECK(status<>'ACTIVE' OR (password_hash IS NOT NULL AND password_hash<>'' AND
-  ((email IS NOT NULL AND email_verified_at IS NOT NULL) OR (phone IS NOT NULL AND phone_verified_at IS NOT NULL)))),
+ CHECK(status<>'ACTIVE' OR (password_hash IS NOT NULL AND password_hash<>'')),
  CHECK(num_nonnulls(refresh_token_hash,refresh_token_expires_at) IN (0,2)),
  CHECK((verification_secret_hash IS NULL AND verification_purpose IS NULL AND verification_expires_at IS NULL AND verification_max_attempts IS NULL AND verification_consumed_at IS NULL)
   OR (verification_secret_hash IS NOT NULL AND verification_purpose IS NOT NULL AND verification_expires_at IS NOT NULL AND verification_max_attempts IS NOT NULL)),

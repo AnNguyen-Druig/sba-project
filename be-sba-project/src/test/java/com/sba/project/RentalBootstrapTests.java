@@ -21,7 +21,8 @@ import static org.mockito.Mockito.verifyNoInteractions;
         "spring.autoconfigure.exclude=org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration",
         "spring.jpa.hibernate.ddl-auto=none",
         "spring.jpa.properties.hibernate.boot.allow_jdbc_metadata_access=false",
-        "spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect"
+        "spring.jpa.database-platform=org.hibernate.dialect.PostgreSQLDialect",
+        "JWT_SECRET=test-only-secret-that-is-at-least-thirty-two-bytes"
 })
 class RentalBootstrapTests {
     @Autowired EntityManagerFactory entityManagerFactory;
@@ -30,7 +31,7 @@ class RentalBootstrapTests {
 
     @Test
     void contextLoadsAllEntitiesAndLocalYamlWithoutOpeningDatabaseConnection() {
-        assertThat(entityManagerFactory.getMetamodel().getEntities()).hasSize(34);
+        assertThat(entityManagerFactory.getMetamodel().getEntities()).hasSize(35);
         assertThat(environment.getActiveProfiles()).contains("local");
         assertThat(environment.getProperty("spring.jpa.properties.hibernate.default_schema")).isEqualTo("rental");
         assertThat(environment.getProperty("spring.sql.init.mode")).isEqualTo("never");
