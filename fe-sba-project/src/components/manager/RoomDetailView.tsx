@@ -594,14 +594,24 @@ export const RoomDetailView: React.FC<RoomDetailViewProps> = ({
               </span>
             </div>
 
-            <button
-              type="button"
-              onClick={() => onNavigate('billing')}
-              className="w-full py-2 px-4 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-xs font-semibold flex items-center justify-center gap-2 cursor-pointer"
-            >
-              <span className="material-symbols-outlined text-base">history</span>
-              <span>Xem lịch sử hóa đơn 6 tháng trước</span>
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => onNavigate('utilities')}
+                className="w-full py-2 px-3 rounded-lg bg-primary/10 text-primary hover:bg-primary hover:text-white transition-colors text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-base">electric_meter</span>
+                <span>Chốt điện nước</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => onNavigate('billing')}
+                className="w-full py-2 px-3 rounded-lg bg-surface-container text-on-surface hover:bg-surface-container-high transition-colors text-xs font-semibold flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <span className="material-symbols-outlined text-base">history</span>
+                <span>Lịch sử hóa đơn</span>
+              </button>
+            </div>
           </section>
 
           {/* 3. Resident Portal & Fast Community Channel */}

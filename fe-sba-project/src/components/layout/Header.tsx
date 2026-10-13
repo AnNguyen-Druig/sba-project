@@ -5,14 +5,15 @@ interface HeaderProps {
   onSwitchToPublic: () => void;
   searchQuery: string;
   onSearchChange: (q: string) => void;
+  onNavigate?: (view: any) => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ onSwitchToPublic, searchQuery, onSearchChange }) => {
+export const Header: React.FC<HeaderProps> = ({ onSwitchToPublic, searchQuery, onSearchChange, onNavigate }) => {
   const [showNotificationMenu, setShowNotificationMenu] = useState(false);
   const [notifications] = useState([
-    { id: 1, title: 'Hóa đơn P.201 đã quá hạn 6 ngày', time: '10 phút trước', unread: true },
-    { id: 2, title: 'Minh Trang vừa đăng thread tìm trọ khớp P.401', time: '42 phút trước', unread: true },
-    { id: 3, title: 'Yêu cầu sửa máy lạnh P.204 đã được tiếp nhận', time: '2 giờ trước', unread: false },
+    { id: 1, title: 'Đề xuất chia tiền phòng ghép P.204 vừa được gửi', time: '15 phút trước', unread: true },
+    { id: 2, title: 'Cảnh báo chỉ số điện P.404 tăng vọt 340 kWh', time: '1 giờ trước', unread: true },
+    { id: 3, title: 'Đã hoàn tất chốt điện nước Tầng 2 & Tầng 4', time: '3 giờ trước', unread: false },
   ]);
 
   return (
@@ -85,11 +86,30 @@ export const Header: React.FC<HeaderProps> = ({ onSwitchToPublic, searchQuery, o
               </div>
               <div className="divide-y divide-surface-container max-h-64 overflow-y-auto">
                 {notifications.map((n) => (
-                  <div key={n.id} className="p-3 hover:bg-surface-container-low transition-colors cursor-pointer">
+                  <div
+                    key={n.id}
+                    onClick={() => {
+                      setShowNotificationMenu(false);
+                      onNavigate?.('utilities');
+                    }}
+                    className="p-3 hover:bg-surface-container-low transition-colors cursor-pointer"
+                  >
                     <p className="text-xs text-on-surface font-medium">{n.title}</p>
                     <span className="text-[10px] text-outline mt-0.5 block">{n.time}</span>
                   </div>
                 ))}
+              </div>
+              <div className="p-2 border-t border-surface-container text-center">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNotificationMenu(false);
+                    onNavigate?.('utilities');
+                  }}
+                  className="w-full py-1 text-[11px] font-bold text-primary hover:bg-primary/10 rounded-lg transition-colors cursor-pointer"
+                >
+                  Xem Trung tâm Thông báo & Điện nước →
+                </button>
               </div>
             </div>
           )}
