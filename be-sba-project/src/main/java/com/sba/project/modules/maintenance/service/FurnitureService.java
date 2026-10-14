@@ -4,6 +4,7 @@ import com.sba.project.common.base.PagedResponse;
 import com.sba.project.modules.maintenance.dto.request.FurnitureCreateRequest;
 import com.sba.project.modules.maintenance.dto.request.FurnitureUpdateRequest;
 import com.sba.project.modules.maintenance.dto.request.FurnitureWarrantyRequest;
+import com.sba.project.modules.maintenance.dto.response.FurnitureFailureResponse;
 import com.sba.project.modules.maintenance.dto.response.FurnitureResponse;
 import com.sba.project.modules.maintenance.dto.response.FurnitureWarrantyResponse;
 import com.sba.project.modules.maintenance.enums.FurnitureStatus;
@@ -29,4 +30,10 @@ public interface FurnitureService {
     FurnitureWarrantyResponse updateWarranty(UUID furnitureId, UUID warrantyId, FurnitureWarrantyRequest request);
 
     void deleteWarranty(UUID furnitureId, UUID warrantyId);
+
+    /** P2-29: warranties of the room's furniture ending within the next {@code withinDays} days. */
+    List<FurnitureWarrantyResponse> getExpiringWarranties(UUID roomId, int withinDays);
+
+    /** P2-29: furniture reported in at least {@code minRequests} repair requests, most reported first. */
+    List<FurnitureFailureResponse> getFrequentlyFailing(UUID roomId, int minRequests);
 }

@@ -41,6 +41,8 @@ public enum ErrorCode {
     PASSWORD_INVALID(1116, "Password does not meet the required policy", HttpStatus.BAD_REQUEST),
     NAME_REQUIRED(1117, "Full name is required", HttpStatus.BAD_REQUEST),
     DATE_OF_BIRTH_INVALID(1118, "Date of birth is invalid", HttpStatus.BAD_REQUEST),
+    OWNER_VERIFICATION_NOT_PENDING(1190, "Owner verification is not awaiting review", HttpStatus.CONFLICT),
+    REVIEW_REASON_REQUIRED(1191, "A review reason is required", HttpStatus.BAD_REQUEST),
 
     // 1200-1299: property.
     BRANCH_NOT_FOUND(1200, "Branch not found", HttpStatus.NOT_FOUND),
@@ -88,6 +90,12 @@ public enum ErrorCode {
     FURNITURE_ASSET_CODE_EXISTS(1705, "Asset code is already used in this room", HttpStatus.CONFLICT),
     INVALID_WARRANTY_PERIOD(1706, "Warranty end date must not be before its start date", HttpStatus.BAD_REQUEST),
     FURNITURE_IN_OPEN_REPAIR(1707, "Furniture is linked to an open repair request", HttpStatus.CONFLICT),
+    MAINTENANCE_ITEM_REQUIRED(1708, "A repair request must report at least one furniture or service item", HttpStatus.BAD_REQUEST),
+    MAINTENANCE_ITEM_ROOM_MISMATCH(1709, "Reported item does not belong to the requested room", HttpStatus.BAD_REQUEST),
+    MAINTENANCE_DUPLICATE_ITEM(1710, "The same item is reported more than once", HttpStatus.BAD_REQUEST),
+    MAINTENANCE_INVALID_ASSIGNEE(1711, "Assignee cannot handle requests of this room", HttpStatus.BAD_REQUEST),
+    MAINTENANCE_LIABILITY_EXCEEDS_COST(1712, "Liabilities exceed the repair cost", HttpStatus.CONFLICT),
+    MAINTENANCE_COST_LIABILITY_MISMATCH(1713, "Approved liabilities must equal the repair cost", HttpStatus.CONFLICT),
 
     // 1800-1899: notification; 1900-1999: reporting; 2000-2099: community; 2100-2199: audit.
     NOTIFICATION_NOT_FOUND(1800, "Notification not found", HttpStatus.NOT_FOUND),
