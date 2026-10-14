@@ -23,6 +23,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -258,6 +259,7 @@ public class MeterChargeServiceImpl implements MeterChargeService {
             return Collections.emptyMap();
         }
 
+        // 1. Lấy danh sách ID dịch vụ phòng (RoomService) cần tra cứu
         List<UUID> roomServiceIds = charges.stream()
                 .filter(Objects::nonNull)
                 .map(RoomServiceCharge::getRoomServiceId)
@@ -265,45 +267,39 @@ public class MeterChargeServiceImpl implements MeterChargeService {
                 .distinct()
                 .toList();
 
-        Map<UUID, RoomService> rsMap = roomServiceIds.isEmpty() ? Collections.emptyMap() :
-                Optional.ofNullable(roomServiceRepository.findAllById(roomServiceIds))
-                        .orElse(Collections.emptyList())
-                        .stream()
-                        .filter(Objects::nonNull)
-                        .filter(rs -> rs.getId() != null)
-                        .collect(Collectors.toMap(RoomService::getId, Function.identity(), (a, b) -> a));
+        // 2. Tra cứu RoomService -> ServiceCatalog ID
+        Map<UUID, UUID> serviceIdByRoomServiceId = new HashMap<>();
+        if (!roomServiceIds.isEmpty()) {
+            List<RoomService> roomServices = roomServiceRepository.findAllById(roomServiceIds);
+            for (RoomService rs : roomServices) {
+                if (rs != null && rs.getId() != null && rs.getServiceId() != null) {
+                    serviceIdByRoomServiceId.put(rs.getId(), rs.getServiceId());
+                }
+            }
+        }
 
-        List<UUID> catIds = rsMap.values().stream()
-                .map(RoomService::getServiceId)
-                .filter(Objects::nonNull)
-                .distinct()
-                .toList();
+        // 3. Tra cứu ServiceCatalog -> Tên dịch vụ
+        Map<UUID, String> serviceNameByCatalogId = new HashMap<>();
+        if (!serviceIdByRoomServiceId.isEmpty()) {
+            List<UUID> catalogIds = new ArrayList<>(serviceIdByRoomServiceId.values());
+            List<ServiceCatalog> catalogs = serviceCatalogRepository.findAllById(catalogIds);
+            for (ServiceCatalog cat : catalogs) {
+                if (cat != null && cat.getId() != null && cat.getName() != null) {
+                    serviceNameByCatalogId.put(cat.getId(), cat.getName());
+                }
+            }
+        }
 
-        Map<UUID, ServiceCatalog> catMap = catIds.isEmpty() ? Collections.emptyMap() :
-                Optional.ofNullable(serviceCatalogRepository.findAllById(catIds))
-                        .orElse(Collections.emptyList())
-                        .stream()
-                        .filter(Objects::nonNull)
-                        .filter(c -> c.getId() != null)
-                        .collect(Collectors.toMap(ServiceCatalog::getId, Function.identity(), (a, b) -> a));
+        // 4. Ánh xạ tên dịch vụ tương ứng cho từng chargeId
+        Map<UUID, String> resultMap = new HashMap<>();
+        for (RoomServiceCharge charge : charges) {
+            if (charge != null && charge.getId() != null) {
+                UUID catalogId = serviceIdByRoomServiceId.get(charge.getRoomServiceId());
+                String serviceName = catalogId != null ? serviceNameByCatalogId.get(catalogId) : null;
+                resultMap.put(charge.getId(), serviceName != null ? serviceName : "Unknown Service");
+            }
+        }
 
-        return charges.stream()
-                .filter(Objects::nonNull)
-                .filter(ch -> ch.getId() != null)
-                .collect(Collectors.toMap(
-                        RoomServiceCharge::getId,
-                        ch -> {
-                            if (ch.getRoomServiceId() != null) {
-                                RoomService rs = rsMap.get(ch.getRoomServiceId());
-                                if (rs != null && rs.getServiceId() != null) {
-                                    ServiceCatalog cat = catMap.get(rs.getServiceId());
-                                    if (cat != null && cat.getName() != null) {
-                                        return cat.getName();
-                                    }
-                                }
-                            }
-                            return "Unknown Service";
-                        },
-                        (a, b) -> a));
+        return resultMap;
     }
 }
