@@ -1,6 +1,7 @@
 package com.sba.project.common.exceptions;
 
 import com.sba.project.common.base.ApiResponse;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolationException;
 import java.util.List;
 import lombok.extern.slf4j.Slf4j;
@@ -99,12 +100,19 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception ex) {
+    public ResponseEntity<ApiResponse<Void>> handleUnexpected(Exception ex, HttpServletRequest request) {
         if (org.springframework.web.util.DisconnectedClientHelper.isClientDisconnectedException(ex)) {
             log.debug("Client disconnected before the response completed");
             return null; // No synthetic success response on a broken connection.
         }
-        log.error("Unhandled request exception ({})", ex.getClass().getName());
+        Throwable rootCause = ex;
+        while (rootCause.getCause() != null && rootCause.getCause() != rootCause) {
+            rootCause = rootCause.getCause();
+        }
+        log.error("Unhandled request {} {} ({}; root cause: {})",
+                request.getMethod(), request.getRequestURI(),
+                ex.getClass().getName(), rootCause.getClass().getName());
+        log.debug("Unhandled request exception details", ex);
         return error(ErrorCode.INTERNAL_ERROR);
     }
 

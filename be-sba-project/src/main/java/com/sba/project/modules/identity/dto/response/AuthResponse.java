@@ -1,5 +1,8 @@
 package com.sba.project.modules.identity.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import java.time.Instant;
+
 public record AuthResponse(
         String accessToken,
         String tokenType,
@@ -7,5 +10,7 @@ public record AuthResponse(
         String accountId,
         String email,
         String fullName,
-        String role) {
+        String role,
+        @JsonIgnore String refreshToken,
+        @JsonIgnore Instant refreshTokenExpiresAt) {
 }

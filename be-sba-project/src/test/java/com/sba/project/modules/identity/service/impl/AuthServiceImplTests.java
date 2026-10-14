@@ -24,6 +24,7 @@ import com.sba.project.modules.identity.repository.InvalidatedTokenRepository;
 import com.sba.project.modules.identity.repository.RoleRepository;
 import com.sba.project.modules.identity.repository.UserRepository;
 import com.sba.project.modules.identity.repository.UserRoleRepository;
+import com.sba.project.modules.identity.service.EmailVerificationService;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
@@ -39,6 +40,7 @@ class AuthServiceImplTests {
     private JwtTokenService jwtTokenService;
     private RefreshTokenService refreshTokenService;
     private BCryptPasswordEncoder passwordEncoder;
+    private EmailVerificationService emailVerificationService;
     private AuthServiceImpl authService;
 
     @BeforeEach
@@ -50,13 +52,15 @@ class AuthServiceImplTests {
         jwtTokenService = mock(JwtTokenService.class);
         refreshTokenService = mock(RefreshTokenService.class);
         passwordEncoder = new BCryptPasswordEncoder();
+        emailVerificationService = mock(EmailVerificationService.class);
         authService = new AuthServiceImpl(
                 userRepository, roleRepository, userRoleRepository,
-                invalidatedTokenRepository, jwtTokenService, refreshTokenService, passwordEncoder);
+                invalidatedTokenRepository, jwtTokenService, refreshTokenService, passwordEncoder,
+                emailVerificationService);
     }
 
     @Test
-    void registerStoresPasswordHashAndReturnsIssuedToken() {
+    void registerCreatesUnverifiedAccountAndSendsVerificationEmail() {
         RegisterRequest request = new RegisterRequest();
         request.setEmail("user@example.com");
         request.setPassword("safe-password");
@@ -71,26 +75,17 @@ class AuthServiceImplTests {
         when(user.getFullName()).thenReturn("Test User");
         when(roleRepository.findByCode(RoleCode.USER)).thenReturn(Optional.of(role));
         when(role.getId()).thenReturn(UUID.randomUUID());
-        when(jwtTokenService.issue(user, RoleCode.USER))
-                .thenReturn(new JwtTokenService.IssuedToken("signed-token", Instant.now().plusSeconds(3600)));
-        when(jwtTokenService.getExpirationSeconds()).thenReturn(3600L);
-        when(refreshTokenService.issue(userId)).thenReturn(new RefreshTokenService.IssuedToken(
-                "refresh-token", "a".repeat(64), Instant.now().plusSeconds(604800)));
+        authService.register(request);
 
-        var response = authService.register(request);
-
-        assertThat(response.response().accessToken()).isEqualTo("signed-token");
-        assertThat(response.refreshToken()).isEqualTo("refresh-token");
-        assertThat(response.response().tokenType()).isEqualTo("Bearer");
-        assertThat(response.response().role()).isEqualTo("USER");
         var savedUser = org.mockito.ArgumentCaptor.forClass(User.class);
         verify(userRepository).save(savedUser.capture());
         assertThat(savedUser.getValue().getEmail()).isEqualTo("user@example.com");
         assertThat(savedUser.getValue().getPasswordHash()).isNotEqualTo("safe-password");
         assertThat(passwordEncoder.matches("safe-password", savedUser.getValue().getPasswordHash())).isTrue();
-        assertThat(savedUser.getValue().getStatus()).isEqualTo(UserStatus.ACTIVE);
+        assertThat(savedUser.getValue().getStatus()).isEqualTo(UserStatus.PENDING_VERIFICATION);
         assertThat(savedUser.getValue().getEmailVerifiedAt()).isNull();
         verify(userRoleRepository).save(any());
+        verify(emailVerificationService).sendVerificationEmail(user);
     }
 
     @Test
@@ -120,7 +115,7 @@ class AuthServiceImplTests {
 
         var result = authService.refresh(currentToken);
 
-        assertThat(result.response().accessToken()).isEqualTo("new-access-token");
+        assertThat(result.accessToken()).isEqualTo("new-access-token");
         assertThat(result.refreshToken()).isEqualTo("rotated-refresh-token");
         verify(user).setRefreshTokenHash("c".repeat(64));
         verify(user).setRefreshTokenExpiresAt(org.mockito.ArgumentMatchers.any(Instant.class));
@@ -173,6 +168,23 @@ class AuthServiceImplTests {
                 .isInstanceOf(AppException.class)
                 .extracting(exception -> ((AppException) exception).getErrorCode())
                 .isEqualTo(ErrorCode.INVALID_CREDENTIALS);
+        verify(jwtTokenService, never()).issue(any(User.class), any(RoleCode.class));
+    }
+
+    @Test
+    void loginRejectsCorrectPasswordUntilEmailIsVerified() {
+        LoginRequest request = new LoginRequest();
+        request.setEmail("user@example.com");
+        request.setPassword("correct-password");
+        User user = mock(User.class);
+        when(userRepository.findByEmailIgnoreCase("user@example.com")).thenReturn(Optional.of(user));
+        when(user.getStatus()).thenReturn(UserStatus.PENDING_VERIFICATION);
+        when(user.getPasswordHash()).thenReturn(passwordEncoder.encode("correct-password"));
+
+        assertThatThrownBy(() -> authService.login(request))
+                .isInstanceOf(AppException.class)
+                .extracting(exception -> ((AppException) exception).getErrorCode())
+                .isEqualTo(ErrorCode.EMAIL_NOT_VERIFIED);
         verify(jwtTokenService, never()).issue(any(User.class), any(RoleCode.class));
     }
 }

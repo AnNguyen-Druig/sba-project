@@ -2,14 +2,12 @@ package com.sba.project.modules.identity.controller;
 
 import com.sba.project.common.base.ApiResponse;
 import com.sba.project.common.security.AuthPrincipal;
+import com.sba.project.modules.identity.dto.request.EmailVerificationRequest;
 import com.sba.project.modules.identity.dto.request.LoginRequest;
 import com.sba.project.modules.identity.dto.request.RegisterRequest;
 import com.sba.project.modules.identity.dto.response.AuthResponse;
-import com.sba.project.modules.identity.service.AuthSessionResult;
 import com.sba.project.modules.identity.service.AuthService;
 import jakarta.validation.Valid;
-import java.time.Duration;
-import java.time.Instant;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -20,6 +18,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.time.Duration;
+import java.time.Instant;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -40,32 +40,36 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<AuthResponse>> register(@Valid @RequestBody RegisterRequest request) {
-        AuthSessionResult session = authService.register(request);
-        ApiResponse<AuthResponse> response = ApiResponse.success(
-                "Account registered successfully",
-                session.response());
-        response.setStatus(HttpStatus.CREATED.value());
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .header(HttpHeaders.SET_COOKIE, refreshCookie(session).toString())
-                .body(response);
+    public ResponseEntity<ApiResponse<Void>> register(@Valid @RequestBody RegisterRequest request) {
+        authService.register(request);
+        ApiResponse<Void> response = ApiResponse.success(
+                "Account created. Check your email to verify it before signing in.",
+                null);
+        response.setStatus(HttpStatus.ACCEPTED.value());
+        return ResponseEntity.status(HttpStatus.ACCEPTED).body(response);
+    }
+
+    @PostMapping("/verify-email")
+    public ResponseEntity<ApiResponse<Void>> verifyEmail(@Valid @RequestBody EmailVerificationRequest request) {
+        authService.verifyEmail(request.token());
+        return ResponseEntity.ok(ApiResponse.success("Email verified successfully. You can now sign in.", null));
     }
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse<AuthResponse>> login(@Valid @RequestBody LoginRequest request) {
-        AuthSessionResult session = authService.login(request);
+        AuthResponse session = authService.login(request);
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, refreshCookie(session).toString())
-                .body(ApiResponse.success("Login successful", session.response()));
+                .body(ApiResponse.success("Login successful", session));
     }
 
     @PostMapping("/refresh")
     public ResponseEntity<ApiResponse<AuthResponse>> refresh(
             @CookieValue(name = REFRESH_COOKIE_NAME, required = false) String refreshToken) {
-        AuthSessionResult session = authService.refresh(refreshToken);
+        AuthResponse session = authService.refresh(refreshToken);
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, refreshCookie(session).toString())
-                .body(ApiResponse.success("Token refreshed successfully", session.response()));
+                .body(ApiResponse.success("Token refreshed successfully", session));
     }
 
     @PostMapping("/logout")
@@ -76,7 +80,7 @@ public class AuthController {
                 .body(ApiResponse.success("Logout successful", null));
     }
 
-    private org.springframework.http.ResponseCookie refreshCookie(AuthSessionResult session) {
+    private org.springframework.http.ResponseCookie refreshCookie(AuthResponse session) {
         long maxAge = Math.max(0, Duration.between(Instant.now(), session.refreshTokenExpiresAt()).getSeconds());
         return org.springframework.http.ResponseCookie.from(REFRESH_COOKIE_NAME, session.refreshToken())
                 .httpOnly(true)

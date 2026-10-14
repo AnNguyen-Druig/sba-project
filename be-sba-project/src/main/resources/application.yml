@@ -4,8 +4,19 @@ spring:
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
+    password: "HtD22012005*#@"
     driver-class-name: org.postgresql.Driver
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:true}
+          starttls:
+            enable: ${SMTP_STARTTLS:true}
   jpa:
     open-in-view: false
     show-sql: false
@@ -15,6 +26,8 @@ spring:
     properties:
       hibernate:
         default_schema: rental
+        type:
+          json_format_mapper: org.hibernate.type.format.jackson.Jackson3JsonFormatMapper
         jdbc:
           time_zone: UTC
         temp:
@@ -27,6 +40,10 @@ spring:
 server:
   port: ${SERVER_PORT:8080}
 app:
+  frontend-url: ${FRONTEND_BASE_URL:http://localhost:3000}
+  mail:
+    from: ${SMTP_FROM:no-reply@example.com}
+    verification-expiration-ms: ${EMAIL_VERIFICATION_EXPIRATION_MS:86400000}
   jwt:
     expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:3600000}
     refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
