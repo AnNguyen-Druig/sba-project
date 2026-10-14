@@ -84,6 +84,27 @@ const AuthSessionPage = () => {
             <span>{user?.email || claims.email || 'Không có email trong phiên'}</span>
           </div>
           <span className="session-role">{user?.role || claims.role || 'USER'}</span>
+          <button
+            type="button"
+            onClick={() => navigate('/dashboard')}
+            style={{
+              marginLeft: 'auto',
+              background: '#00685f',
+              color: '#ffffff',
+              border: 'none',
+              borderRadius: '10px',
+              padding: '10px 18px',
+              fontWeight: 'bold',
+              fontSize: '13px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px',
+              boxShadow: '0 2px 8px rgba(0, 104, 95, 0.25)'
+            }}
+          >
+            <span>👉 Vào Dashboard Quản lý TroPro</span>
+          </button>
         </section>
 
         <div className="session-grid">

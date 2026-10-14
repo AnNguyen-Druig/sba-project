@@ -22,8 +22,11 @@ import java.math.RoundingMode;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -251,22 +254,53 @@ public class MeterChargeServiceImpl implements MeterChargeService {
     }
 
     private Map<UUID, String> resolveServiceNamesForCharges(List<RoomServiceCharge> charges) {
-        List<UUID> roomServiceIds = charges.stream().map(RoomServiceCharge::getRoomServiceId).distinct().toList();
-        Map<UUID, RoomService> rsMap = roomServiceRepository.findAllById(roomServiceIds).stream()
-                .collect(Collectors.toMap(RoomService::getId, Function.identity()));
+        if (charges == null || charges.isEmpty()) {
+            return Collections.emptyMap();
+        }
 
-        List<UUID> catIds = rsMap.values().stream().map(RoomService::getServiceId).distinct().toList();
-        Map<UUID, ServiceCatalog> catMap = serviceCatalogRepository.findAllById(catIds).stream()
-                .collect(Collectors.toMap(ServiceCatalog::getId, Function.identity()));
+        List<UUID> roomServiceIds = charges.stream()
+                .filter(Objects::nonNull)
+                .map(RoomServiceCharge::getRoomServiceId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        Map<UUID, RoomService> rsMap = roomServiceIds.isEmpty() ? Collections.emptyMap() :
+                Optional.ofNullable(roomServiceRepository.findAllById(roomServiceIds))
+                        .orElse(Collections.emptyList())
+                        .stream()
+                        .filter(Objects::nonNull)
+                        .filter(rs -> rs.getId() != null)
+                        .collect(Collectors.toMap(RoomService::getId, Function.identity(), (a, b) -> a));
+
+        List<UUID> catIds = rsMap.values().stream()
+                .map(RoomService::getServiceId)
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+
+        Map<UUID, ServiceCatalog> catMap = catIds.isEmpty() ? Collections.emptyMap() :
+                Optional.ofNullable(serviceCatalogRepository.findAllById(catIds))
+                        .orElse(Collections.emptyList())
+                        .stream()
+                        .filter(Objects::nonNull)
+                        .filter(c -> c.getId() != null)
+                        .collect(Collectors.toMap(ServiceCatalog::getId, Function.identity(), (a, b) -> a));
 
         return charges.stream()
+                .filter(Objects::nonNull)
+                .filter(ch -> ch.getId() != null)
                 .collect(Collectors.toMap(
                         RoomServiceCharge::getId,
                         ch -> {
-                            RoomService rs = rsMap.get(ch.getRoomServiceId());
-                            if (rs != null) {
-                                ServiceCatalog cat = catMap.get(rs.getServiceId());
-                                if (cat != null) return cat.getName();
+                            if (ch.getRoomServiceId() != null) {
+                                RoomService rs = rsMap.get(ch.getRoomServiceId());
+                                if (rs != null && rs.getServiceId() != null) {
+                                    ServiceCatalog cat = catMap.get(rs.getServiceId());
+                                    if (cat != null && cat.getName() != null) {
+                                        return cat.getName();
+                                    }
+                                }
                             }
                             return "Unknown Service";
                         },

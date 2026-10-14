@@ -139,17 +139,23 @@ public class CostAllocationServiceImpl implements CostAllocationService {
         ArrayNode sharesArray = JsonNodeFactory.instance.arrayNode();
         for (TenantShareCalc calc : calculations) {
             ObjectNode share = JsonNodeFactory.instance.objectNode();
-            share.put("tenantId", calc.getResidency().getTenantId().toString());
+            if (calc.getResidency().getTenantId() != null) {
+                share.put("tenantId", calc.getResidency().getTenantId().toString());
+            }
             if (calc.getResidency().getContractTenantId() != null) {
                 share.put("contractTenantId", calc.getResidency().getContractTenantId().toString());
             }
-            share.put("contractId", calc.getResidency().getContractId().toString());
+            if (calc.getResidency().getContractId() != null) {
+                share.put("contractId", calc.getResidency().getContractId().toString());
+            }
             share.put("residentDays", calc.getResidency().getResidentDays());
             share.put("amount", calc.getAllocatedAmount().longValue());
+            share.put("allocatedAmount", calc.getAllocatedAmount().longValue());
             sharesArray.add(share);
         }
 
         result.set("shares", sharesArray);
+        result.set("allocations", sharesArray);
         return result;
     }
 

@@ -5,7 +5,9 @@ import com.sba.project.common.base.PagedResponse;
 import com.sba.project.common.exceptions.AppException;
 import com.sba.project.common.exceptions.ErrorCode;
 import com.sba.project.common.security.AuthPrincipal;
+import com.sba.project.modules.notification.dto.request.BulkNotificationRequest;
 import com.sba.project.modules.notification.dto.request.MarkNotificationReadRequest;
+import com.sba.project.modules.notification.dto.request.SendNotificationRequest;
 import com.sba.project.modules.notification.dto.response.NotificationResponse;
 import com.sba.project.modules.notification.dto.response.UnreadCountResponse;
 import com.sba.project.modules.notification.service.NotificationService;
@@ -16,11 +18,13 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,25 +32,16 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Controller for user notification endpoints.
- * Implements [P1-125].
+ * Controller for all notification endpoints (user queries & sending).
+ * Consolidated under /api/notifications and /api/notification.
+ * Implements [P1-123], [P1-124], [P1-125].
  */
 @RestController
-@RequestMapping("/api/notifications")
+@RequestMapping({"/api/notifications", "/api/notification"})
 @RequiredArgsConstructor
 public class NotificationController {
 
     private final NotificationService notificationService;
-
-    /**
-     * Retrieve paginated notifications for the current authenticated user.
-     * Task: [P1-125]
-     *
-     * @param read optional boolean filter (true = read, false = unread, null = all)
-     * @param page page index (0-based, default: 0)
-     * @param size page size (default: 20)
-     * @return paginated notification responses wrapped in ApiResponse
-     */
     @GetMapping
     public ResponseEntity<ApiResponse<PagedResponse<NotificationResponse>>> getMyNotifications(
             @RequestParam(required = false) Boolean read,
@@ -115,6 +110,38 @@ public class NotificationController {
         UUID currentUserId = getCurrentUserId();
         NotificationResponse result = notificationService.getNotificationById(currentUserId, notificationId);
         return ResponseEntity.ok(ApiResponse.success(result));
+    }
+
+    /**
+     * Send a single notification (direct / admin / trigger).
+     * Task: [P1-123]
+     *
+     * @param request send notification payload
+     * @return created notification response wrapped in ApiResponse
+     */
+    @PostMapping("/send")
+    public ResponseEntity<ApiResponse<NotificationResponse>> sendNotification(
+            @Valid @RequestBody SendNotificationRequest request) {
+        NotificationResponse result = notificationService.sendNotification(request);
+        ApiResponse<NotificationResponse> response = ApiResponse.success("Notification sent successfully", result);
+        response.setStatus(HttpStatus.CREATED.value());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    /**
+     * Send bulk notifications to multiple recipients.
+     * Task: [P1-124]
+     *
+     * @param request bulk notification payload
+     * @return list of created notification responses wrapped in ApiResponse
+     */
+    @PostMapping("/send-bulk")
+    public ResponseEntity<ApiResponse<List<NotificationResponse>>> sendBulkNotification(
+            @Valid @RequestBody BulkNotificationRequest request) {
+        List<NotificationResponse> result = notificationService.sendBulkNotification(request);
+        ApiResponse<List<NotificationResponse>> response = ApiResponse.success("Bulk notifications processed successfully", result);
+        response.setStatus(HttpStatus.CREATED.value());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     /**

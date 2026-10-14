@@ -27,6 +27,7 @@ const AppRoutes = () => {
       <Route path="/" element={<AuthSessionPage />} />
       <Route path="/login" element={<Navigate to="/" replace />} />
       <Route path="/dashboard" element={<DashboardApp />} />
+      <Route path="/utilities" element={<DashboardApp />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
