@@ -88,6 +88,10 @@ public enum ErrorCode {
     REPORT_REQUEST_NOT_FOUND(1701, "Maintenance request not found", HttpStatus.NOT_FOUND),
     REPORT_RECORD_NOT_FOUND(1702, "Maintenance record not found", HttpStatus.NOT_FOUND),
     MAINTENANCE_STATE_CONFLICT(1703, "Current maintenance state does not allow this operation", HttpStatus.CONFLICT),
+    FURNITURE_WARRANTY_NOT_FOUND(1704, "Furniture warranty not found", HttpStatus.NOT_FOUND),
+    FURNITURE_ASSET_CODE_EXISTS(1705, "Asset code is already used in this room", HttpStatus.CONFLICT),
+    INVALID_WARRANTY_PERIOD(1706, "Warranty end date must not be before its start date", HttpStatus.BAD_REQUEST),
+    FURNITURE_IN_OPEN_REPAIR(1707, "Furniture is linked to an open repair request", HttpStatus.CONFLICT),
 
     // 1800-1899: notification; 1900-1999: reporting; 2000-2099: community; 2100-2199: audit.
     NOTIFICATION_NOT_FOUND(1800, "Notification not found", HttpStatus.NOT_FOUND),
