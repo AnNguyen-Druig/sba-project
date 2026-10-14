@@ -4,7 +4,7 @@ spring:
   datasource:
     url: ${DB_URL}
     username: ${DB_USERNAME}
-    password: "HtD22012005*#@"
+    password: ${DB_PASSWORD}
     driver-class-name: org.postgresql.Driver
   jpa:
     open-in-view: false
