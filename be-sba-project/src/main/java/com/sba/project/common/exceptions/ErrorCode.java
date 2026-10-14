@@ -65,6 +65,10 @@ public enum ErrorCode {
     SERVICE_CHARGE_NOT_FOUND(1402, "Service charge not found", HttpStatus.NOT_FOUND),
     INVALID_METER_READING(1403, "Meter readings are invalid", HttpStatus.BAD_REQUEST),
     INVALID_COST_ALLOCATION(1404, "Cost allocation does not match the charge", HttpStatus.BAD_REQUEST),
+    CONTRACT_SERVICE_NOT_FOUND(1405, "Contract service registration not found", HttpStatus.NOT_FOUND),
+    COST_ALLOCATION_PROPOSAL_NOT_FOUND(1406, "Cost allocation proposal not found", HttpStatus.NOT_FOUND),
+    MANDATORY_SERVICE_CANNOT_BE_CANCELLED(1407, "Mandatory service cannot be cancelled", HttpStatus.BAD_REQUEST),
+    SERVICE_CHARGE_ALREADY_FINALIZED(1408, "Service charge is already finalized", HttpStatus.CONFLICT),
 
     // 1500-1599: billing.
     INVOICE_NOT_FOUND(1500, "Invoice not found", HttpStatus.NOT_FOUND),

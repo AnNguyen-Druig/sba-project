@@ -156,3 +156,91 @@ export interface MaintenanceTicket {
   actualCost?: number;
   resolvedAt?: string;
 }
+
+// ================= STUDENT 4 DOMAIN TYPES =================
+export interface ServiceItem {
+  id: string;
+  code: string;
+  name: string;
+  unit: string;
+  serviceType: 'ELECTRICITY' | 'WATER' | 'INTERNET' | 'PARKING' | 'CLEANING' | 'SECURITY' | 'LAUNDRY' | 'OTHER';
+  billingMethod: 'METERED' | 'PER_PERSON' | 'PER_ROOM' | 'FIXED' | 'PER_USE';
+  referencePrice: number;
+  mandatory: boolean;
+  active: boolean;
+  description?: string;
+  icon?: string;
+}
+
+export interface MeterReadingRecord {
+  id: string;
+  roomId: string;
+  roomNumber: string;
+  floor: number;
+  tenantName: string;
+  billingMonth: string;
+  previousElectricity: number;
+  currentElectricity: number;
+  electricityUsage: number;
+  electricityRate: number;
+  electricityTotal: number;
+  previousWater: number;
+  currentWater: number;
+  waterUsage: number;
+  waterRate: number;
+  waterTotal: number;
+  fixedServicesTotal: number;
+  totalAmount: number;
+  status: 'draft' | 'recorded' | 'finalized' | 'abnormal';
+  statusLabel: string;
+  isAbnormal: boolean;
+  abnormalReason?: string;
+  meterPhotoUrl?: string;
+  waterPhotoUrl?: string;
+  readingDate: string;
+  finalizedAt?: string;
+}
+
+export interface CostProposalMember {
+  userId: string;
+  name: string;
+  avatar: string;
+  residentDays: number;
+  percentage: number;
+  allocatedAmount: number;
+  note?: string;
+}
+
+export interface CostProposal {
+  id: string;
+  chargeId: string;
+  roomId: string;
+  roomNumber: string;
+  totalAmount: number;
+  proposedBy: string;
+  proposedByAvatar: string;
+  method: 'RESIDENT_DAYS' | 'APPROVED_CUSTOM';
+  createdAt: string;
+  status: 'PENDING' | 'APPROVED' | 'REJECTED';
+  statusLabel: string;
+  reason: string;
+  members: CostProposalMember[];
+}
+
+export interface AppNotification {
+  id: string;
+  recipientUserId: string;
+  recipientName: string;
+  type: string;
+  title: string;
+  message: string;
+  referenceType?: string;
+  referenceId?: string;
+  read: boolean;
+  readAt?: string;
+  createdAt: string;
+  channel: 'IN_APP' | 'EMAIL' | 'SMS';
+  deliveryStatus: 'SENT' | 'PENDING' | 'FAILED';
+  category: 'utilities' | 'financial' | 'contract' | 'maintenance' | 'system';
+}
+

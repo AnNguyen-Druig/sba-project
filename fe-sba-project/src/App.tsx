@@ -36,7 +36,9 @@ import { AddRoomModal } from './components/modals/AddRoomModal';
 
 export default function App() {
   // Navigation State
-  const [currentView, setCurrentView] = useState<ViewMode>('overview');
+  const [currentView, setCurrentView] = useState<ViewMode>(() =>
+    window.location.pathname.includes('utilities') ? 'utilities' : 'overview'
+  );
   const [isPublicMode, setIsPublicMode] = useState<boolean>(false);
   const [selectedRoomId, setSelectedRoomId] = useState<string>('r-204');
   const [globalSearch, setGlobalSearch] = useState<string>('');
@@ -284,6 +286,7 @@ export default function App() {
               onSwitchToPublic={handleSwitchToPublic}
               searchQuery={globalSearch}
               onSearchChange={setGlobalSearch}
+              onNavigate={(v) => setCurrentView(v)}
             />
 
             <main className="w-full pt-16 flex-1 bg-background">
