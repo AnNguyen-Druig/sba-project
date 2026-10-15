@@ -1,5 +1,15 @@
-import {createRoot} from 'react-dom/client';
-import App from './App.jsx';
-import './index.css';
+import { StrictMode } from 'react'
+import { createRoot } from 'react-dom/client'
+import { RouterProvider } from 'react-router/dom'
 
-createRoot(document.getElementById('root')!).render(<App />);
+import './index.css'
+import { router } from './router'
+
+const rootElement = document.getElementById('root')
+if (!rootElement) throw new Error('Không tìm thấy phần tử #root trong index.html')
+
+createRoot(rootElement).render(
+  <StrictMode>
+    <RouterProvider router={router} />
+  </StrictMode>,
+)

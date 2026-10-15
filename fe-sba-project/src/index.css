@@ -1,101 +1,121 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+@import '@fontsource/be-vietnam-pro/400.css';
+@import '@fontsource/be-vietnam-pro/700.css';
 
-@theme {
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #eff4ff;
-  --color-surface-container: #e6eeff;
-  --color-surface-container-high: #dee9fc;
-  --color-surface-container-highest: #d9e3f6;
+/*
+ * Design tokens — nguồn duy nhất cho màu, chữ, bo góc, đổ bóng.
+ * Bảng màu và thang chữ lấy từ "Frontend Brief" mục 3. Không thêm màu ngoài bảng này.
+ */
+:root {
+  /* Màu chủ đạo */
+  --primary: #0f766e;
+  --primary-foreground: #ffffff;
+  --primary-soft: #e6f2f0;
 
-  --color-background: #f8f9ff;
-  --color-surface: #f8f9ff;
-  --color-surface-bright: #f8f9ff;
-  --color-surface-dim: #d0dbed;
-  --color-surface-variant: #d9e3f6;
+  /* Nền và chữ */
+  --background: #f8fafc;
+  --surface: #ffffff;
+  --foreground: #0f172a;
+  --muted-foreground: #64748b;
+  --border: #e2e8f0;
 
-  --color-on-surface: #121c2a;
-  --color-on-surface-variant: #3d4947;
-  --color-on-background: #121c2a;
-  --color-inverse-surface: #27313f;
-  --color-inverse-on-surface: #eaf1ff;
+  /* Màu trạng thái */
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --info: #2563eb;
 
-  --color-primary: #00685f;
-  --color-primary-container: #008378;
-  --color-primary-fixed: #89f5e7;
-  --color-primary-fixed-dim: #6bd8cb;
-  --color-on-primary: #ffffff;
-  --color-on-primary-container: #f4fffc;
-  --color-on-primary-fixed: #00201d;
-  --color-on-primary-fixed-variant: #005049;
+  --radius: 0.75rem;
+}
 
-  --color-secondary: #ae3115;
-  --color-secondary-container: #fd6a49;
-  --color-secondary-fixed: #ffdad2;
-  --color-secondary-fixed-dim: #ffb4a3;
-  --color-on-secondary: #ffffff;
-  --color-on-secondary-container: #640f00;
-  --color-on-secondary-fixed: #3d0600;
-  --color-on-secondary-fixed-variant: #8c1900;
+@theme inline {
+  /* Xoá bảng màu mặc định của Tailwind để không ai dùng nhầm màu ngoài brief */
+  --color-*: initial;
+  --color-transparent: transparent;
+  --color-current: currentColor;
+  --color-white: #ffffff;
 
-  --color-tertiary: #2e6560;
-  --color-tertiary-container: #487e79;
-  --color-tertiary-fixed: #b5ede7;
-  --color-tertiary-fixed-dim: #9ad1cb;
-  --color-on-tertiary: #ffffff;
-  --color-on-tertiary-container: #f3fffd;
-  --color-on-tertiary-fixed: #00201e;
-  --color-on-tertiary-fixed-variant: #144f4b;
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--border);
+  --color-ring: var(--primary);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --color-info: var(--info);
 
-  --color-outline: #6d7a77;
-  --color-outline-variant: #bcc9c6;
-  --color-error: #ba1a1a;
-  --color-error-container: #ffdad6;
-  --color-on-error: #ffffff;
-  --color-on-error-container: #93000a;
+  /* Một font duy nhất */
+  --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
 
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-headline: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+  /* Bốn cỡ chữ theo brief + một cỡ "display" chỉ dùng cho tiêu đề homepage */
+  --text-*: initial;
+  --text-xs: 0.75rem;
+  --text-xs--line-height: 1.125rem;
+  --text-sm: 0.875rem;
+  --text-sm--line-height: 1.375rem;
+  --text-base: 1rem;
+  --text-base--line-height: 1.5rem;
+  --text-xl: 1.5rem;
+  --text-xl--line-height: 2rem;
+  --text-display: clamp(2.25rem, 1.25rem + 3.2vw, 4rem);
+  --text-display--line-height: 1.1;
+  --text-display--letter-spacing: -0.02em;
+
+  /* Hai độ đậm */
+  --font-weight-*: initial;
+  --font-weight-normal: 400;
+  --font-weight-bold: 700;
+
+  --radius-sm: calc(var(--radius) - 0.25rem);
+  --radius-md: calc(var(--radius) - 0.125rem);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 0.25rem);
+  --radius-2xl: calc(var(--radius) + 0.75rem);
+
+  --shadow-*: initial;
+  --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.06);
+  --shadow-float: 0 12px 32px -8px rgb(15 23 42 / 0.18);
+
+  --animate-rise: rise 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes rise {
+    from {
+      opacity: 0;
+      transform: translateY(16px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
 
 @layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+
   body {
-    font-family: var(--font-sans);
-    color: var(--color-on-surface);
-    background-color: var(--color-background);
+    @apply bg-background font-sans text-base text-foreground antialiased;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-headline);
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
-}
-
-.material-symbols-outlined {
-  font-family: 'Material Symbols Outlined';
-  font-weight: normal;
-  font-style: normal;
-  font-size: 20px;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
-  display: inline-block;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  -webkit-font-feature-settings: 'liga';
-  -webkit-font-smoothing: antialiased;
-  vertical-align: middle;
-}
-
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-thumb {
-  background: #bcc9c6;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
 }
