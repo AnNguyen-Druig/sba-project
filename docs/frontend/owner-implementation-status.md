@@ -1,5 +1,7 @@
 # TroPro Owner — implementation status
 
+Cập nhật sau pha ADMIN: review UI thật trên frontend/shared mock hiện đã có tại `/admin/owner-verifications`, thay cho harness-only ghi ở báo cáo Owner ban đầu dưới đây. Xem [trạng thái ADMIN](admin-implementation-status.md); Backend verification APIs vẫn là phần bàn giao.
+
 Ngày: 16/10/2026. Branch làm việc: `feature/fe-rebuild`. Không commit/push, đổi branch, sửa BE hoặc schema.
 
 **COMPLETED — O01–O20 trong phạm vi frontend/mock đã duyệt.** Các phần production BE và nghiệp vụ được yêu cầu hoãn nằm ở mục giới hạn, không được báo thành tích hợp thật.

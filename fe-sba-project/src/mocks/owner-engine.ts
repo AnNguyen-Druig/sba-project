@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import type { User, Branch } from '@/interfaces/domain'
+import { userSchema } from '@/interfaces/domain'
 import {
   branchInputSchema,
   invitationInputSchema,
@@ -177,6 +178,14 @@ export class OwnerEngine {
       eligible: this.eligible(u),
     }
   }
+  verificationForAdmin(user: User) {
+    return {
+      ...(this.state.verification.find((v) => v.userId === user.id) || newVerification(user)),
+      fullName: user.fullName,
+      phone: user.phone,
+      eligible: this.eligible(user),
+    }
+  }
   submitVerification(actor: User, input: unknown) {
     const data = z
       .object({
@@ -241,6 +250,7 @@ export class OwnerEngine {
       if (!v || v.status !== 'PENDING') throw new MockError('Hồ sơ không còn chờ duyệt.', 409)
       v.status = approved ? 'APPROVED' : 'REJECTED'
       v.reviewedAt = now()
+      v.reviewedBy = trusted.id
       v.reason = reason
       const u = this.e.db.state.users.find((u) => u.id === userId)!
       if (approved && grantOwner && !u.roles.includes('OWNER')) u.roles.push('OWNER')
@@ -500,7 +510,7 @@ export class OwnerEngine {
       .filter((v) => v.ownerId === actor.id)
       .map((v) => ({
         id: v.managerId,
-        user: this.e.db.state.users.find((u) => u.id === v.managerId)!,
+        user: userSchema.parse(this.e.db.state.users.find((u) => u.id === v.managerId)!),
         assignedAt: this.state.relationshipDates[v.managerId] || '2026-10-01T00:00:00Z',
         branches: this.branches(actor)
           .filter((b) => b.managerId === v.managerId)
@@ -602,7 +612,7 @@ export class OwnerEngine {
         null,
         `/owner/managers/${user.id}`,
       )
-      return { invitation: i, user }
+      return { invitation: i, user: userSchema.parse(user) }
     })
   }
   invitationAction(actor: User, id: string, action: string) {

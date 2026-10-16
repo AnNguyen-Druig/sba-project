@@ -6,6 +6,7 @@ import { UserLayout } from '@/layouts/user-layout'
 import { TenantLayout } from '@/layouts/tenant-layout'
 import { ManagerLayout } from '@/layouts/manager-layout'
 import { OwnerLayout } from '@/layouts/owner-layout'
+import { AdminLayout } from '@/layouts/admin-layout'
 import { RouteGuard } from '@/features/auth/route-guard'
 import { NotFoundPage } from '@/pages/not-found-page'
 import { RouteErrorPage } from '@/pages/route-error-page'
@@ -40,6 +41,20 @@ export const router = createBrowserRouter([
       {
         element: <RouteGuard />,
         children: [
+          {path:'admin',element:<AdminLayout/>,children:[
+            {index:true,element:<Navigate to="/admin/dashboard" replace/>},
+            {path:'dashboard',lazy:async()=>({Component:(await import('@/features/admin/platform-pages')).AdminDashboard})},
+            {path:'users',lazy:async()=>({Component:(await import('@/features/admin/user-pages')).AdminUsers})},
+            {path:'users/new',lazy:async()=>({Component:(await import('@/features/admin/user-pages')).AdminUserCreate})},
+            {path:'users/:userId',lazy:async()=>({Component:(await import('@/features/admin/user-pages')).AdminUserDetail})},
+            {path:'roles',lazy:async()=>({Component:(await import('@/features/admin/platform-pages')).AdminRoles})},
+            {path:'owner-verifications',lazy:async()=>({Component:(await import('@/features/admin/verification-pages')).AdminVerificationQueue})},
+            {path:'owner-verifications/:userId',lazy:async()=>({Component:(await import('@/features/admin/verification-pages')).AdminVerificationDetail})},
+            {path:'owners',lazy:async()=>({Component:(await import('@/features/admin/platform-pages')).AdminOwners})},
+            {path:'branches',lazy:async()=>({Component:(await import('@/features/admin/platform-pages')).AdminBranches})},
+            {path:'activity',lazy:async()=>({Component:(await import('@/features/admin/platform-pages')).AdminActivity})},
+            {path:'activity/:eventId',lazy:async()=>({Component:(await import('@/features/admin/platform-pages')).AdminAuditDetail})},
+          ]},
           {
             path: 'owner', element: <OwnerLayout />, children: [
               { index: true, element: <Navigate to="/owner/dashboard" replace /> },

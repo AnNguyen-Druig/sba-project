@@ -85,6 +85,9 @@ export default function NotificationsPage() {
               ['TENANT_ALLOCATION', 'Phân bổ phí'],
               ['TENANT_MAINTENANCE', 'Bảo trì'],
               ['TENANT_BRANCH', 'Chi nhánh'],
+              ...(useSession.getState().user?.roles.includes('ADMIN') ? [['ADMIN_VERIFICATION','Xác minh chủ trọ'],['ADMIN_USER','Quản trị tài khoản']] : []),
+              ['OWNER_VERIFICATION','Kết quả xác minh chủ trọ'],
+              ['ACCOUNT_STATUS','Trạng thái tài khoản'],
             ].map(([value, label]) => (
               <option key={value} value={value}>
                 {label}

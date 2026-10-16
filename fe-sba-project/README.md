@@ -83,3 +83,13 @@ Owner APIs chưa có đầy đủ trên Backend; provider real sẽ hiển thị
 - [Hướng dẫn demo Owner](../docs/frontend/owner-demo-guide.md)
 - [Hợp đồng API và phần BE còn thiếu](../docs/frontend/owner-api-contract.md)
 - [Trạng thái O01–O20 và kiểm thử](../docs/frontend/owner-implementation-status.md)
+
+## Không gian quản trị (A01–A13)
+
+Với `VITE_API_MODE=mock`, đăng nhập `admin@tropro.demo` / `TroPro@123`, mở `/admin/dashboard`. Có quản lý/mời User, account lifecycle, xét duyệt Owner, roles/directory read-only và safe audit; dùng chung dữ liệu với các vai trò hiện có. A14 moderation hoãn Phase3.
+
+`hybrid` dùng API User thật qua feature `adminUsers`; các domain Admin còn thiếu BE dùng mock nhưng chưa có trusted ADMIN bridge cho real identity. Full verification demo dùng fully mock. Preview tài liệu là ảnh mẫu vô danh, không phải giấy tờ đã upload. Disable account BE hiện chưa bảo đảm thu hồi JWT cũ; các giới hạn production được ghi rõ trong contract.
+
+- [Hướng dẫn demo Admin và reset](../docs/frontend/admin-demo-guide.md)
+- [Hợp đồng API Admin và bàn giao BE](../docs/frontend/admin-api-contract.md)
+- [Trạng thái A01–A13, kiểm thử và Taste Skills thực sự dùng](../docs/frontend/admin-implementation-status.md)

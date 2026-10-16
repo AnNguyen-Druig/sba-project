@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import { z } from 'zod'
@@ -13,6 +13,7 @@ import { ownerApi } from '@/services/owner'
 import { queryClient } from '@/services/query-client'
 import { dateTime } from '@/lib/activity'
 import { provider } from '@/services/config'
+import { profileService } from '@/services/guest-user'
 const status: Record<string, string> = {
   NOT_SUBMITTED: 'Chưa nộp hồ sơ',
   PENDING: 'Đang chờ xét duyệt',
@@ -27,6 +28,24 @@ export function OwnerVerificationPage() {
       refetchInterval: 3000,
       retry: false,
     })
+  const identity = useQuery({
+    queryKey: ['owner-authorized-profile', user.id],
+    queryFn: profileService.get,
+    enabled:
+      !!query.data?.eligible &&
+      provider('auth') === 'mock' &&
+      provider('profile') === 'mock' &&
+      !user.roles.includes('OWNER'),
+    retry: false,
+  })
+  useEffect(() => {
+    if (
+      identity.data?.id === user.id &&
+      identity.data.roles.includes('OWNER') &&
+      !user.roles.includes('OWNER')
+    )
+      useSession.getState().updateUser(identity.data)
+  }, [identity.data, user.id, user.roles])
   return (
     <Page title="Xác minh chủ trọ" eyebrow="HỒ SƠ CHỦ TRỌ" narrow back="/user/dashboard">
       <QueryState pending={query.isPending} error={query.error} retry={query.refetch}>

@@ -359,6 +359,18 @@ describe('Manager invitations require identity confirmation', () => {
     expect(e.branches({ ...user, roles: ['USER', 'MANAGER'] })).toEqual([])
     expect(() => o.accept(user, i.id)).toThrow()
   })
+  it('acceptance and Manager directory never expose canonical credentials', () => {
+    const canonical = e.db.state.users.find((u) => u.id === user.id)!
+    canonical.passwordHash = 'private-manager-credential'
+    const i = o.invite(owner, invite())
+    const accepted = o.accept(user, i.id)
+    expect(accepted.user.roles).toContain('MANAGER')
+    expect(o.managers(owner).some((m) => m.id === user.id)).toBe(true)
+    expect(JSON.stringify([accepted, o.managers(owner)])).not.toMatch(
+      /passwordHash|private-manager-credential/,
+    )
+    expect(canonical.passwordHash).toBe('private-manager-credential')
+  })
   it('rejects duplicate pending invitations and unrelated acceptance', () => {
     const i = o.invite(owner, invite())
     expect(() => o.invite(owner, invite())).toThrow()

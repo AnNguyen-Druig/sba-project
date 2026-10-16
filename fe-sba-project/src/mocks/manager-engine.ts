@@ -213,6 +213,9 @@ export class ManagerEngine {
     }
   }
   branches(actor: User) {
+    const canonical = this.db.state.users.find((u) => u.id === actor.id && u.status === 'ACTIVE')
+    if (!canonical) return []
+    actor = canonical
     if (!actor.roles.some((r) => r === 'MANAGER' || r === 'OWNER')) return []
     return this.state.branches.filter(
       (b) =>

@@ -1136,6 +1136,7 @@ describe('Maintenance, asset history and private settings', () => {
     record.responsibleParty = 'TENANT'
     record.approvalStatus = 'PENDING'
     const user = { ...manager, id: tenantUser.id }
+    e.db.state.users.find(u=>u.id===user.id)!.roles.push('MANAGER')
     e.state.branches.find((v) => v.id === b)!.managerId = user.id
     e.state.ownerManagers.push({ ownerId: owner.id, managerId: user.id })
     expect(() =>

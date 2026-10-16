@@ -21,6 +21,9 @@ export const dateTime = (value: string) =>
 export const dateOnly = (value: string) =>
   new Date(`${value}T00:00:00+07:00`).toLocaleDateString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })
 export function referenceLink(type: string | null, id: string | null, tenancyId?: string, branchId?:string) {
+  if(type==='ADMIN_VERIFICATION'&&id)return `/admin/owner-verifications/${encodeURIComponent(id)}`
+  if(type==='ADMIN_USER'&&id)return `/admin/users/${encodeURIComponent(id)}`
+  if(type==='ACCOUNT_STATUS')return '/profile'
   if(type==='OWNER_VERIFICATION')return '/owner/verification'
   if(type==='MANAGER_INVITATION')return '/manager-invitations'
   if(type==='OWNER_MANAGER' && id)return `/owner/managers/${encodeURIComponent(id)}`

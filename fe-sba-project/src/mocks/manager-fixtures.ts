@@ -1,5 +1,6 @@
 import type { User } from '@/interfaces/domain'
 import type { OwnerState } from '@/interfaces/owner'
+import type { AdminState } from '@/interfaces/admin'
 import type {
   ManagerBranch,
   ManagerContract,
@@ -44,6 +45,7 @@ export type InvoiceSource = {
 }
 export type ManagerState = {
   owner?: OwnerState
+  admin?: AdminState
   branches: ManagerBranch[]
   ownerManagers: { ownerId: string; managerId: string }[]
   contracts: ManagerContract[]

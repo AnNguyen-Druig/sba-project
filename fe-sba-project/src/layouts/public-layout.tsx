@@ -78,6 +78,7 @@ export function SiteHeader() {
             </Link>
             {user ? (
               <>
+                {user.roles.includes('ADMIN') && <Link to="/admin/dashboard" className="hidden min-h-11 items-center text-sm font-bold text-primary sm:inline-flex">Quản trị</Link>}
                 {user.roles.includes('OWNER') && <Link to="/owner/dashboard" className="hidden min-h-11 items-center text-sm font-bold text-primary sm:inline-flex">Chủ trọ</Link>}
                 {!!assignments.data?.length && (
                   <Link
@@ -150,6 +151,7 @@ export function SiteHeader() {
                 ['Tổng quan', '/user/dashboard'],
                 ...(assignments.data?.length ? [['Quản lý chi nhánh', '/manager/dashboard']] : []),
                 ...(user?.roles.includes('OWNER') ? [['Không gian chủ trọ', '/owner/dashboard']] : []),
+                ...(user?.roles.includes('ADMIN') ? [['Quản trị hệ thống', '/admin/dashboard']] : []),
                 ...(tenancies.data?.length ? [['Không gian thuê', '/tenant/dashboard']] : []),
                 ['Tìm phòng', '/rooms'],
                 ['Lịch xem phòng', '/user/appointments'],

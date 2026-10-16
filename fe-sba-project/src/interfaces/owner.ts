@@ -88,6 +88,7 @@ export const verificationSchema = z.object({
   contactVerified: z.boolean(),
   submittedAt: z.string().nullable(),
   reviewedAt: z.string().nullable(),
+  reviewedBy: z.uuid().nullable().optional(),
   reason: z.string().nullable(),
   document: z
     .object({ name: z.string(), mime: z.string(), size: z.number(), resourceId: z.string() })

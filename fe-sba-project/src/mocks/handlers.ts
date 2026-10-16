@@ -10,6 +10,8 @@ import { managerDb } from './manager-engine'
 import { handleManager } from './manager-handler'
 import { handleOwner } from './owner-handler'
 import { ownerDb, otherOwner } from './owner-engine'
+import { adminDb, adminUser, secondAdmin, applicant } from './admin-engine'
+import { handleAdmin } from './admin-handler'
 import { inventory } from './inventory'
 import {
   addDays,
@@ -66,6 +68,9 @@ function current(request: Request): User {
           ownerUser.id,
           otherManager.id,
           otherOwner.id,
+          adminUser.id,
+          secondAdmin.id,
+          applicant.id,
         ].includes(parsed.data.id)
       )
         throw new MockError('Danh tính demo cần đăng nhập bằng provider mock.', 401)
@@ -75,6 +80,8 @@ function current(request: Request): User {
         db.state.users.push(user)
         db.save()
       }
+      if (user.status !== 'ACTIVE')
+        throw new MockError('Tài khoản không còn được phép truy cập.', 401)
       return user
     }
   }
@@ -109,8 +116,11 @@ export const handlers = [
       )
     try {
       db.tick()
-      for (const demo of [tenantUser, roommateUser, managerUser, ownerUser, otherManager])
-        if (!db.state.users.some((u) => u.id === demo.id)) db.state.users.push(demo)
+      for (const demo of [
+        tenantUser, roommateUser, managerUser, ownerUser, otherManager,
+        adminUser, secondAdmin, applicant,
+      ])
+        if (!db.state.users.some((u) => u.id === demo.id)) db.state.users.push(structuredClone(demo))
       const payload = async <T>() => (await request.json()) as T
       if (path === '/api/auth/login') {
         const input = loginSchema.parse(await payload())
@@ -127,10 +137,18 @@ export const handlers = [
                 ownerUser.id,
                 otherManager.id,
                 otherOwner.id,
+                adminUser.id,
+                secondAdmin.id,
+                applicant.id,
               ].includes(user.id) && input.password === 'TroPro@123')
         if (!user || !matches) throw new MockError('Email hoặc mật khẩu chưa đúng.', 401)
         if (user.status !== 'ACTIVE')
-          throw new MockError('Vui lòng xác minh email trước khi đăng nhập.', 403)
+          throw new MockError(
+            ['DISABLED', 'LOCKED'].includes(user.status)
+              ? 'Tài khoản đã ngừng kích hoạt hoặc bị khóa.'
+              : 'Vui lòng xác minh email trước khi đăng nhập.',
+            403,
+          )
         return ok(session(user))
       }
       if (path === '/api/auth/refresh') {
@@ -295,6 +313,8 @@ export const handlers = [
       const branch = path.match(/^\/api\/v1\/public\/branches\/([^/]+)$/)
       if (branch) return ok(db.branch(branch[1]))
       const user = current(request)
+      if (path === '/api/users' || path.startsWith('/api/users/') || path.startsWith('/api/admin/'))
+        return await handleAdmin(request, user, scenario === 'empty')
       if (path.startsWith('/api/tenant/'))
         return await handleTenant(request, user.id, scenario === 'empty')
       if (path.startsWith('/api/manager/')) return await handleManager(request,user,scenario==='empty')
@@ -445,7 +465,13 @@ export const handlers = [
         error instanceof MockError ? error.status : error instanceof z.ZodError ? 422 : 500
       return HttpResponse.json({ status, code: status, message, data: null }, { status })
     } finally {
-      try {managerDb.transaction(()=>{managerDb.scanInbox();ownerDb.scanActivity()})}catch{/* A failed inbox persistence must not replace the API response. */}
+      try {
+        managerDb.transaction(() => {
+          managerDb.scanInbox()
+          ownerDb.scanActivity()
+          adminDb.scan()
+        })
+      } catch {/* A failed inbox persistence must not replace the API response. */}
     }
   }),
 ]

@@ -174,6 +174,7 @@ export function LoginPage() {
           </button>
           <button className="ml-4 min-h-11 font-bold text-primary underline" type="button" onClick={()=>{form.setValue('email','manager@tropro.demo');form.setValue('password','TroPro@123')}}>Điền tài khoản Manager demo</button>
           <button className="ml-4 min-h-11 font-bold text-primary underline" type="button" onClick={()=>{form.setValue('email','owner@tropro.demo');form.setValue('password','TroPro@123')}}>Điền tài khoản Owner demo</button>
+          <button className="ml-4 min-h-11 font-bold text-primary underline" type="button" onClick={()=>{form.setValue('email','admin@tropro.demo');form.setValue('password','TroPro@123')}}>Điền tài khoản Admin demo</button>
         </div>
       )}
     </>

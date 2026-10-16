@@ -10,7 +10,7 @@ export const userSchema = z.object({
   phone: z.string().nullable(),
   dateOfBirth: z.string().nullable(),
   gender: z.string().nullable(),
-  status: z.enum(['ACTIVE', 'PENDING_VERIFICATION', 'LOCKED']),
+  status: z.enum(['INVITED', 'PENDING_VERIFICATION', 'ACTIVE', 'LOCKED', 'DISABLED']),
 })
 export type User = z.infer<typeof userSchema>
 export const sessionSchema = z.object({

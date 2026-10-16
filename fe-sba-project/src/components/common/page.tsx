@@ -1,4 +1,11 @@
-import { Children, cloneElement, isValidElement, type ReactNode, type HTMLAttributes } from 'react'
+import {
+  Children,
+  cloneElement,
+  isValidElement,
+  useRef,
+  type ReactNode,
+  type HTMLAttributes,
+} from 'react'
 import { Link } from 'react-router'
 import { ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, Search, X } from 'lucide-react'
 import { Dialog } from 'radix-ui'
@@ -271,11 +278,22 @@ export function Modal({
   children: ReactNode
   drawer?: boolean
 }) {
+  const returnFocus = useRef<HTMLElement | null>(null)
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 z-40 bg-foreground/50" />
         <Dialog.Content
+          onOpenAutoFocus={() => {
+            returnFocus.current =
+              document.activeElement instanceof HTMLElement ? document.activeElement : null
+          }}
+          onCloseAutoFocus={(event) => {
+            if (returnFocus.current?.isConnected) {
+              event.preventDefault()
+              returnFocus.current.focus()
+            }
+          }}
           className={cn(
             'fixed z-50 max-h-[90dvh] overflow-y-auto bg-surface p-6 shadow-float outline-none',
             drawer
