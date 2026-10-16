@@ -12,7 +12,8 @@ export function RentalSteps() {
     <section
       id="how-it-works"
       aria-labelledby="steps-title"
-      className="scroll-mt-24 border-y border-border bg-surface py-16 sm:py-20"
+      // className="scroll-mt-24 border-y border-border bg-surface py-16 sm:py-20"
+      className="scroll-mt-24 border-y border-border bg-surface-soft py-16 sm:py-20"
     >
       <Container>
         <h2 id="steps-title" className="text-xl font-bold">
