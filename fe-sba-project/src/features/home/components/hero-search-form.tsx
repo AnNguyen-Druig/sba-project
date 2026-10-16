@@ -41,7 +41,10 @@ export function HeroSearchForm({ className }: HeroSearchFormProps) {
       role="search"
       aria-label="Tìm phòng trọ"
       onSubmit={handleSubmit}
-      className={cn('animate-rise rounded-xl bg-surface p-4 shadow-float sm:p-5', className)}
+      className={cn(
+          'hero-search-panel animate-rise rounded-xl p-4 sm:p-5',
+          className,
+      )}
     >
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-[1.4fr_1fr_1fr_auto] lg:items-end">
         <div className="col-span-2 grid min-w-0 gap-1.5 sm:col-span-1">
