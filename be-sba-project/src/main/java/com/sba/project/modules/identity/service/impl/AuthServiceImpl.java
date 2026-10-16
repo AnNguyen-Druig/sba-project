@@ -20,7 +20,7 @@ import com.sba.project.modules.identity.repository.InvalidatedTokenRepository;
 import com.sba.project.modules.identity.repository.UserRepository;
 import com.sba.project.modules.identity.repository.UserRoleRepository;
 import com.sba.project.modules.identity.service.AuthService;
-import com.sba.project.modules.identity.service.AuthSessionResult;
+import com.sba.project.modules.identity.service.EmailVerificationService;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.Comparator;
@@ -41,6 +41,7 @@ public class AuthServiceImpl implements AuthService {
     private final JwtTokenService jwtTokenService;
     private final RefreshTokenService refreshTokenService;
     private final PasswordEncoder passwordEncoder;
+    private final EmailVerificationService emailVerificationService;
 
     public AuthServiceImpl(
             UserRepository userRepository,
@@ -49,7 +50,8 @@ public class AuthServiceImpl implements AuthService {
             InvalidatedTokenRepository invalidatedTokenRepository,
             JwtTokenService jwtTokenService,
             RefreshTokenService refreshTokenService,
-            PasswordEncoder passwordEncoder) {
+            PasswordEncoder passwordEncoder,
+            EmailVerificationService emailVerificationService) {
         this.userRepository = userRepository;
         this.roleRepository = roleRepository;
         this.userRoleRepository = userRoleRepository;
@@ -57,11 +59,12 @@ public class AuthServiceImpl implements AuthService {
         this.jwtTokenService = jwtTokenService;
         this.refreshTokenService = refreshTokenService;
         this.passwordEncoder = passwordEncoder;
+        this.emailVerificationService = emailVerificationService;
     }
 
     @Override
     @Transactional
-    public AuthSessionResult register(RegisterRequest request) {
+    public void register(RegisterRequest request) {
         String email = request.getEmail().trim().toLowerCase(Locale.ROOT);
         String password = request.getPassword();
         if (password.getBytes(StandardCharsets.UTF_8).length > 72) {
@@ -78,7 +81,7 @@ public class AuthServiceImpl implements AuthService {
             user.setEmail(email);
             user.setPasswordHash(passwordEncoder.encode(password));
             user.setFullName(request.getFullName().trim());
-            user.setStatus(UserStatus.ACTIVE);
+            user.setStatus(UserStatus.PENDING_VERIFICATION);
             user = userRepository.save(user);
 
             Role role = roleRepository.findByCode(roleCode)
@@ -86,20 +89,31 @@ public class AuthServiceImpl implements AuthService {
             UserRole userRole = new UserRole();
             userRole.setId(new UserRoleId(user.getId(), role.getId()));
             userRoleRepository.save(userRole);
+            emailVerificationService.sendVerificationEmail(user);
         } catch (DataIntegrityViolationException exception) {
             throw new AppException(ErrorCode.DATA_CONFLICT);
         }
-        return createAuthSession(user, roleCode);
     }
 
     @Override
     @Transactional
-    public AuthSessionResult login(LoginRequest request) {
+    public void verifyEmail(String token) {
+        emailVerificationService.verifyEmail(token);
+    }
+
+    @Override
+    @Transactional
+    public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmailIgnoreCase(request.getEmail().trim())
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_CREDENTIALS));
-        if (user.getStatus() != UserStatus.ACTIVE
-                || user.getPasswordHash() == null
+        if (user.getPasswordHash() == null
                 || !passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
+            throw new AppException(ErrorCode.INVALID_CREDENTIALS);
+        }
+        if (user.getStatus() == UserStatus.PENDING_VERIFICATION) {
+            throw new AppException(ErrorCode.EMAIL_NOT_VERIFIED);
+        }
+        if (user.getStatus() != UserStatus.ACTIVE) {
             throw new AppException(ErrorCode.INVALID_CREDENTIALS);
         }
         List<RoleCode> roles = userRoleRepository.findAllByIdUserId(user.getId()).stream()
@@ -117,7 +131,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     @Transactional
-    public AuthSessionResult refresh(String presentedToken) {
+    public AuthResponse refresh(String presentedToken) {
         UUID userId = refreshTokenService.getUserId(presentedToken);
         if (userId == null) {
             throw new AppException(ErrorCode.UNAUTHENTICATED);
@@ -155,7 +169,7 @@ public class AuthServiceImpl implements AuthService {
         });
     }
 
-    private AuthSessionResult createAuthSession(User user, RoleCode role) {
+    private AuthResponse createAuthSession(User user, RoleCode role) {
         IssuedToken accessToken = jwtTokenService.issue(user, role);
         var refreshToken = refreshTokenService.issue(user.getId());
         user.setRefreshTokenHash(refreshToken.hash());
@@ -167,8 +181,10 @@ public class AuthServiceImpl implements AuthService {
                 user.getId().toString(),
                 user.getEmail(),
                 user.getFullName(),
-                role.name().toUpperCase(Locale.ROOT));
-        return new AuthSessionResult(response, refreshToken.value(), refreshToken.expiresAt());
+                role.name().toUpperCase(Locale.ROOT),
+                refreshToken.value(),
+                refreshToken.expiresAt());
+        return response;
     }
 
     private static int rolePriority(RoleCode role) {
