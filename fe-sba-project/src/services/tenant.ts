@@ -12,6 +12,13 @@ import {
   type ReportInput,
 } from '@/interfaces/tenant'
 
+import { provider } from './config'
+import { utilitiesService } from './utilities'
+import type {
+  ContractServiceRegistrationInput,
+  CreateCostAllocationProposalInput,
+} from '@/interfaces/utilities'
+
 const path = (id: string, resource: string) =>
   `/api/tenant/tenancies/${encodeURIComponent(id)}/${resource}`
 export const tenantApi = {
@@ -36,19 +43,77 @@ export const tenantApi = {
       write('POST', value),
     ),
   services: (id: string) => request('tenant', path(id, 'services'), z.array(serviceSchema)),
-  registerService: (id: string, value: unknown) =>
-    request('tenant', path(id, 'services'), serviceSchema, write('POST', value)),
-  cancelService: (id: string, serviceId: string) =>
-    request(
+  registerService: async (id: string, value: unknown) => {
+    if (provider('utilities') === 'real') {
+      const item = await utilitiesService.contractServices.register(
+        value as ContractServiceRegistrationInput,
+      )
+      return {
+        id: item.id,
+        name: item.serviceName,
+        mandatory: false,
+        unit: '',
+        unitPrice: item.agreedUnitPrice,
+        subscriptionId: item.id,
+        status: item.status,
+        startDate: item.startDate,
+        endDate: item.endDate,
+        note: item.reason || '',
+        history: [],
+      }
+    }
+    return request('tenant', path(id, 'services'), serviceSchema, write('POST', value))
+  },
+  cancelService: async (id: string, serviceId: string) => {
+    if (provider('utilities') === 'real') {
+      const item = await utilitiesService.contractServices.cancel(serviceId)
+      return {
+        id: item.id,
+        name: item.serviceName,
+        mandatory: false,
+        unit: '',
+        unitPrice: item.agreedUnitPrice,
+        subscriptionId: item.id,
+        status: item.status,
+        startDate: item.startDate,
+        endDate: item.endDate,
+        note: item.reason || '',
+        history: [],
+      }
+    }
+    return request(
       'tenant',
       path(id, `services/${encodeURIComponent(serviceId)}/cancel`),
       serviceSchema,
       write('POST'),
-    ),
+    )
+  },
   utilities: (id: string) => request('tenant', path(id, 'utilities'), z.array(chargeSchema)),
   allocations: (id: string) => request('tenant', path(id, 'allocations'), z.array(proposalSchema)),
-  propose: (id: string, value: unknown) =>
-    request('tenant', path(id, 'allocations'), proposalSchema, write('POST', value)),
+  propose: async (id: string, value: unknown) => {
+    if (provider('utilities') === 'real') {
+      const p = await utilitiesService.costAllocation.propose(
+        value as CreateCostAllocationProposalInput,
+      )
+      return {
+        id: p.id,
+        contractTenantId: p.proposedBy,
+        chargeId: p.roomServiceChargeId,
+        method: p.method === 'RESIDENT_DAYS' ? 'RESIDENT_DAYS' : ('APPROVED_CUSTOM' as const),
+        reason: p.reason || '',
+        status: (p.status === 'APPROVED'
+          ? 'APPROVED'
+          : p.status === 'REJECTED'
+            ? 'REJECTED'
+            : 'PENDING') as 'PENDING' | 'APPROVED' | 'REJECTED',
+        createdAt: p.createdAt || new Date().toISOString(),
+        decidedAt: p.processedAt || null,
+        decision: p.status === 'PENDING' ? null : p.status,
+        shares: [],
+      }
+    }
+    return request('tenant', path(id, 'allocations'), proposalSchema, write('POST', value))
+  },
   reports: (id: string) => request('tenant', path(id, 'maintenance'), z.array(reportSchema)),
   report: (id: string, reportId: string) =>
     request('tenant', path(id, `maintenance/${encodeURIComponent(reportId)}`), reportSchema),
