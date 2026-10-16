@@ -2,14 +2,18 @@ import { Container } from '@/components/common/container'
 
 const steps = [
   { title: 'Tìm phòng', text: 'Lọc theo khu vực, giá và hình thức thuê.' },
-  { title: 'Đặt lịch xem', text: 'Chọn giờ, chủ trọ xác nhận qua thông báo.' },
-  { title: 'Giữ phòng', text: 'Đặt cọc để phòng không bị người khác thuê.' },
-  { title: 'Ký hợp đồng', text: 'Nhận phòng, theo dõi hoá đơn ngay trên app.' },
+  { title: 'Xem phòng nếu cần', text: 'Chọn giờ thuận tiện, chờ chi nhánh xác nhận.' },
+  { title: 'Yêu cầu giữ chỗ', text: 'Chọn ngày thuê và đọc chính sách thanh toán.' },
+  { title: 'Thống nhất hợp đồng', text: 'Trao đổi giá thuê và điều kiện trước khi nhận phòng.' },
 ]
 
 export function RentalSteps() {
   return (
-    <section aria-labelledby="steps-title" className="border-y border-border bg-surface py-16 sm:py-20">
+    <section
+      id="how-it-works"
+      aria-labelledby="steps-title"
+      className="scroll-mt-24 border-y border-border bg-surface py-16 sm:py-20"
+    >
       <Container>
         <h2 id="steps-title" className="text-xl font-bold">
           Thuê phòng trong 4 bước

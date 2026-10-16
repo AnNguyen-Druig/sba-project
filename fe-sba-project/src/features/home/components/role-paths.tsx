@@ -3,7 +3,6 @@ import { Bell, DoorOpen, Receipt, Wrench, Zap, type LucideIcon } from 'lucide-re
 
 import { Container } from '@/components/common/container'
 import { Button } from '@/components/ui/button'
-import { routes } from '@/lib/routes'
 import { cn } from '@/lib/utils'
 
 type Feature = { icon: LucideIcon; text: string }
@@ -54,7 +53,7 @@ export function RolePaths() {
             <p className="mt-1 text-sm text-white">Quản lý cả dãy trọ ở một nơi.</p>
             <FeatureList items={ownerFeatures} inverted />
             <Button asChild variant="inverse" className="mt-8 self-start">
-              <Link to={routes.login}>Đăng nhập quản lý</Link>
+              <Link to="/owner-onboarding">Tìm hiểu dành cho chủ trọ</Link>
             </Button>
           </article>
 
@@ -63,7 +62,7 @@ export function RolePaths() {
             <p className="mt-1 text-sm text-foreground">Mọi thứ về phòng của bạn.</p>
             <FeatureList items={tenantFeatures} />
             <Button asChild className="mt-8 self-start">
-              <Link to={routes.myRoom}>Vào phòng của tôi</Link>
+              <Link to="/user/dashboard">Vào không gian cá nhân</Link>
             </Button>
           </article>
         </div>

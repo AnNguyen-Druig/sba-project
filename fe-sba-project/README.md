@@ -2,6 +2,12 @@
 
 React 19 + Vite + TypeScript + Tailwind CSS v4 + shadcn/ui (Radix) + lucide-react + React Router 7.
 
+Guest + Auth + User đã được triển khai trên `feature/fe-rebuild`, dùng Zustand cho phiên đăng nhập, TanStack Query cho dữ liệu máy chủ và MSW cho API mô phỏng. Chi tiết API và kết quả kiểm thử: [API contract](../docs/frontend/guest-user-api-contract.md), [Implementation status](../docs/frontend/guest-user-implementation-status.md).
+
+Mặc định chạy ở chế độ `mock`. Tài khoản thử: `an@tropro.demo` / `TroPro@123`. Không chuyển tiền thật trong bản demo.
+
+Sao chép `.env.example` sang `.env.local`, đổi `VITE_API_MODE=hybrid` để dùng auth/notification BE và các tính năng còn thiếu qua mock. `real` gửi mọi yêu cầu đến BE và hiển thị lỗi khi endpoint chưa tồn tại. Khởi động lại Vite sau khi đổi cấu hình. Khi dùng email BE, đặt `FRONTEND_BASE_URL=http://localhost:5173` để liên kết xác minh mở đúng FE.
+
 ## Chạy
 
 ```bash
@@ -9,6 +15,9 @@ npm install
 npm run dev        # http://localhost:5173
 npm run build      # kiểm tra type + build
 npm run lint
+npm run typecheck
+npm test           # test nghiệp vụ và adapter API
+npm run test:e2e   # desktop/mobile; dùng Edge cài trên máy
 ```
 
 ## Design system
@@ -29,16 +38,21 @@ src/
   components/common/   # dùng chung: StatusBadge, EmptyState, ErrorState, Logo, Container
   layouts/             # PublicLayout (header + footer cho khách)
   features/home/       # homepage
-  features/rooms/      # types, dữ liệu giả, service, hook, RoomCard
-  pages/               # trang tạm (ComingSoon), 404
+  features/rooms/      # tìm phòng, chi tiết, chi nhánh, service, hook, RoomCard
+  features/auth/       # auth và session Zustand
+  features/leasing/    # lịch hẹn, giữ chỗ và thanh toán demo
+  features/user/       # tổng quan, hồ sơ, thông báo
+  interfaces/          # DTO/schema Zod dùng chung
+  services/            # provider, HTTP client, API adapter và query cache
+  mocks/               # MSW, fixtures và state machine nghiệp vụ
+  pages/               # Owner entry, 404 và lỗi route
   lib/                 # cn(), formatVnd(), formatDate(), routes, site
   router.tsx
 ```
 
 ## Nối backend
 
-Dữ liệu đang là dữ liệu giả trong `src/features/rooms/data/rooms.mock.ts`.
-Khi có API, chỉ cần sửa `src/features/rooms/api/rooms.service.ts`; component không phải đổi.
+Dữ liệu được lấy qua `src/services/guest-user.ts`. Provider theo feature được chọn trong `src/services/config.ts`; mock fixtures nằm trong `src/mocks/fixtures.ts`. Component không import trực tiếp mảng dữ liệu giả. Lỗi API thật không tự chuyển sang dữ liệu mock.
 
 Xem thử trạng thái của danh sách phòng: thêm `?demo=loading`, `?demo=empty` hoặc `?demo=error` vào URL.
 
@@ -59,3 +73,13 @@ ffmpeg -i input.mp4 -frames:v 1 -vf scale=1280:-2 -c:v libwebp -quality 72 livin
 ## Thêm component shadcn
 
 `components.json` đã cấu hình sẵn: `npx shadcn@latest add dialog`.
+
+## Không gian chủ trọ (O01–O20)
+
+Với `VITE_API_MODE=mock`, đăng nhập `owner@tropro.demo` / `TroPro@123`, mở `/owner/dashboard`. Owner quản trị Branch, Manager, policy, QR, tài chính và phê duyệt; vận hành dùng lại các trang Manager với scope sở hữu. Guest/User/Tenant/Manager dùng cùng domain mock và được giữ nguyên.
+
+Owner APIs chưa có đầy đủ trên Backend; provider real sẽ hiển thị lỗi nếu endpoint thiếu. Quyết định duyệt điều chỉnh không tự sửa hóa đơn đã phát hành. Không dùng giấy tờ hoặc giao dịch thật trong demo.
+
+- [Hướng dẫn demo Owner](../docs/frontend/owner-demo-guide.md)
+- [Hợp đồng API và phần BE còn thiếu](../docs/frontend/owner-api-contract.md)
+- [Trạng thái O01–O20 và kiểm thử](../docs/frontend/owner-implementation-status.md)

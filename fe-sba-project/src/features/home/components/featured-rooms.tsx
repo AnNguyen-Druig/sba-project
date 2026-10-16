@@ -17,7 +17,7 @@ export function FeaturedRooms() {
       <Container>
         <div className="mb-8 flex items-center justify-between gap-4">
           <h2 id="featured-title" className="text-xl font-bold">
-            Phòng mới đăng
+            Phòng đang cho thuê
           </h2>
           <Button asChild variant="link" className="px-0">
             <Link to={routes.rooms}>Xem tất cả</Link>
@@ -44,7 +44,7 @@ export function FeaturedRooms() {
           {status === 'success' && rooms.length === 0 && (
             <EmptyState
               icon={SearchX}
-              title="Chưa có phòng mới đăng. Thử tìm theo khu vực khác."
+              title="Chưa có phòng phù hợp. Thử tìm theo khu vực khác."
               action={
                 <Button asChild variant="outline">
                   <Link to={routes.rooms}>Xem tất cả phòng</Link>

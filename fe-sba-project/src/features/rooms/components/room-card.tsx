@@ -56,7 +56,7 @@ export function RoomCard({ room }: RoomCardProps) {
         <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
           <li className="flex items-center gap-1">
             <Ruler className="size-3.5" aria-hidden="true" />
-            {room.sizeM2} m²
+            {room.sizeM2 === null ? 'Chưa có diện tích' : `${room.sizeM2} m²`}
           </li>
           <li className="flex items-center gap-1">
             <Users className="size-3.5" aria-hidden="true" />

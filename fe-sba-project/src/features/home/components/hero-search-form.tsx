@@ -4,7 +4,13 @@ import { Search } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import {
   areaOptions,
   priceOptions,
@@ -15,9 +21,7 @@ import { cn } from '@/lib/utils'
 
 import { buildSearchUrl } from '../lib/build-search-url'
 
-const quickAreas = areaOptions.filter((o) =>
-  (quickAreaKeys as readonly string[]).includes(o.value),
-)
+const quickAreas = areaOptions.filter((o) => (quickAreaKeys as readonly string[]).includes(o.value))
 
 type HeroSearchFormProps = { className?: string }
 
@@ -94,12 +98,9 @@ export function HeroSearchForm({ className }: HeroSearchFormProps) {
         </Button>
       </div>
 
-      <nav
-        aria-label="Khu vực tìm nhiều"
-        className="mt-4 hidden border-t border-border pt-3 sm:block"
-      >
+      <nav aria-label="Gợi ý khu vực" className="mt-4 hidden border-t border-border pt-3 sm:block">
         <ul className="flex flex-wrap items-center gap-2">
-          <li className="mr-1 text-sm text-muted-foreground">Tìm nhiều:</li>
+          <li className="mr-1 text-sm text-muted-foreground">Khám phá:</li>
           {quickAreas.map((o) => (
             <li key={o.value}>
               <Link

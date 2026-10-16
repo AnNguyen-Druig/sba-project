@@ -100,7 +100,7 @@ export function HeroVideo() {
     <section
       ref={sectionRef}
       aria-labelledby="hero-title"
-      className="relative h-svh min-h-[600px] overflow-hidden bg-foreground"
+      className="relative h-svh min-h-[650px] overflow-hidden bg-foreground"
     >
       <div ref={mediaRef} className="absolute inset-0 will-change-transform">
         {reducedMotion ? (
@@ -113,7 +113,7 @@ export function HeroVideo() {
             muted
             loop
             playsInline
-            preload="auto"
+            preload="metadata"
             disablePictureInPicture
             aria-hidden="true"
             tabIndex={-1}
@@ -123,15 +123,21 @@ export function HeroVideo() {
       </div>
 
       {/* Lớp phủ: trên cho header, dưới cho tiêu đề — giữ chữ trắng đọc được trên video sáng */}
-      <div aria-hidden="true" className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-foreground/60 to-foreground/0" />
-      <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-t from-foreground/90 via-foreground/40 to-foreground/0" />
+      <div
+        aria-hidden="true"
+        className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-foreground/60 to-foreground/0"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute inset-0 bg-gradient-to-t from-foreground/90 via-foreground/40 to-foreground/0"
+      />
 
       <Container className="relative flex h-full flex-col justify-end pt-20 pb-6 sm:pt-24 sm:pb-10">
         <h1 id="hero-title" className="max-w-3xl text-display font-bold text-balance text-white">
           Tìm phòng trọ vừa túi tiền
         </h1>
         <p className="mt-3 max-w-lg text-base text-white">
-          Ảnh thật, giá rõ, đặt lịch xem phòng trong vài bước.
+          Khám phá không gian phù hợp, xem giá tham khảo và đặt lịch xem phòng.
         </p>
         <HeroSearchForm className="mt-6 sm:mt-8" />
       </Container>

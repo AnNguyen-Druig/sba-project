@@ -22,7 +22,7 @@ export const priceOptions: Option[] = [
 ]
 
 export const rentalModeOptions: Option<RentalMode>[] = [
-  { value: 'WHOLE_ROOM', label: 'Nguyên phòng' },
+  { value: 'ROOM', label: 'Nguyên phòng' },
   { value: 'SLOT', label: 'Ở ghép' },
 ]
 
