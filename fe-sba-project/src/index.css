@@ -1,101 +1,238 @@
-@import "tailwindcss";
+@import 'tailwindcss';
+@import '@fontsource/be-vietnam-pro/400.css';
+@import '@fontsource/be-vietnam-pro/700.css';
 
-@theme {
-  --color-surface-container-lowest: #ffffff;
-  --color-surface-container-low: #eff4ff;
-  --color-surface-container: #e6eeff;
-  --color-surface-container-high: #dee9fc;
-  --color-surface-container-highest: #d9e3f6;
+/*
+ * Design tokens — nguồn duy nhất cho màu, chữ, bo góc, đổ bóng.
+ * Bảng màu và thang chữ lấy từ "Frontend Brief" mục 3. Không thêm màu ngoài bảng này.
+ */
+/*:root {*/
+/*    !* Màu chủ đạo *!*/
+/*    --primary: #0f766e;*/
+/*    --primary-foreground: #ffffff;*/
+/*    --primary-soft: #e6f2f0;*/
 
-  --color-background: #f8f9ff;
-  --color-surface: #f8f9ff;
-  --color-surface-bright: #f8f9ff;
-  --color-surface-dim: #d0dbed;
-  --color-surface-variant: #d9e3f6;
+/*    !* Nền và chữ *!*/
+/*    --background: #f8fafc;*/
+/*    --surface: #ffffff;*/
+/*    --foreground: #0f172a;*/
+/*    --muted-foreground: #64748b;*/
+/*    --border: #e2e8f0;*/
 
-  --color-on-surface: #121c2a;
-  --color-on-surface-variant: #3d4947;
-  --color-on-background: #121c2a;
-  --color-inverse-surface: #27313f;
-  --color-inverse-on-surface: #eaf1ff;
+/*    !* Màu trạng thái *!*/
+/*    --success: #15803d;*/
+/*    --warning: #92400e;*/
+/*    --danger: #dc2626;*/
+/*    --info: #2563eb;*/
 
-  --color-primary: #00685f;
-  --color-primary-container: #008378;
-  --color-primary-fixed: #89f5e7;
-  --color-primary-fixed-dim: #6bd8cb;
-  --color-on-primary: #ffffff;
-  --color-on-primary-container: #f4fffc;
-  --color-on-primary-fixed: #00201d;
-  --color-on-primary-fixed-variant: #005049;
+/*    --radius: 0.75rem;*/
+/*}*/
+:root {
+    /* TroPro Brand */
+    --primary: #0f766e;
+    --primary-foreground: #ffffff;
+    --primary-soft: #e6f2f0;
 
-  --color-secondary: #ae3115;
-  --color-secondary-container: #fd6a49;
-  --color-secondary-fixed: #ffdad2;
-  --color-secondary-fixed-dim: #ffb4a3;
-  --color-on-secondary: #ffffff;
-  --color-on-secondary-container: #640f00;
-  --color-on-secondary-fixed: #3d0600;
-  --color-on-secondary-fixed-variant: #8c1900;
+    /* Warm Beige / Cozy Design System */
+    --background: #f6f0e8;
+    --surface: #fffbf6;
+    --surface-soft: #eee4d9;
 
-  --color-tertiary: #2e6560;
-  --color-tertiary-container: #487e79;
-  --color-tertiary-fixed: #b5ede7;
-  --color-tertiary-fixed-dim: #9ad1cb;
-  --color-on-tertiary: #ffffff;
-  --color-on-tertiary-container: #f3fffd;
-  --color-on-tertiary-fixed: #00201e;
-  --color-on-tertiary-fixed-variant: #144f4b;
+    /* Typography */
+    --foreground: #2e2823;
+    --muted-foreground: #706359;
 
-  --color-outline: #6d7a77;
-  --color-outline-variant: #bcc9c6;
-  --color-error: #ba1a1a;
-  --color-error-container: #ffdad6;
-  --color-on-error: #ffffff;
-  --color-on-error-container: #93000a;
+    /* Border */
+    --border: #e4d7ca;
 
-  --font-sans: 'Inter', system-ui, sans-serif;
-  --font-headline: 'Plus Jakarta Sans', system-ui, sans-serif;
-  --font-mono: 'JetBrains Mono', monospace;
+    /* Semantic Colors */
+    --success: #15803d;
+    --warning: #92400e;
+    --danger: #dc2626;
+    --info: #2563eb;
+
+    /* Radius */
+    --radius: 0.75rem;
+}
+
+
+@theme inline {
+    /* Xoá bảng màu mặc định của Tailwind để không ai dùng nhầm màu ngoài brief */
+    --color-*: initial;
+    --color-transparent: transparent;
+    --color-current: currentColor;
+    --color-white: #ffffff;
+
+    --color-primary: var(--primary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary-soft: var(--primary-soft);
+    --color-background: var(--background);
+    --color-surface: var(--surface);
+    --color-surface-soft: var(--surface-soft);
+    --color-foreground: var(--foreground);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-border: var(--border);
+    --color-input: var(--border);
+    --color-ring: var(--primary);
+    --color-success: var(--success);
+    --color-warning: var(--warning);
+    --color-danger: var(--danger);
+    --color-info: var(--info);
+
+    /* Một font duy nhất */
+    --font-sans: 'Be Vietnam Pro', ui-sans-serif, system-ui, sans-serif;
+
+    /* Bốn cỡ chữ theo brief + một cỡ "display" chỉ dùng cho tiêu đề homepage */
+    --text-*: initial;
+    --text-xs: 0.75rem;
+    --text-xs--line-height: 1.125rem;
+    --text-sm: 0.875rem;
+    --text-sm--line-height: 1.375rem;
+    --text-base: 1rem;
+    --text-base--line-height: 1.5rem;
+    --text-xl: 1.5rem;
+    --text-xl--line-height: 2rem;
+    --text-page-title: clamp(1.75rem, 1.3rem + 1.4vw, 2.4rem);
+    --text-page-title--line-height: 1.2;
+    --text-display: clamp(2.25rem, 1.25rem + 3.2vw, 4rem);
+    --text-display--line-height: 1.1;
+    --text-display--letter-spacing: -0.02em;
+
+    /* Hai độ đậm */
+    --font-weight-*: initial;
+    --font-weight-normal: 400;
+    --font-weight-bold: 700;
+
+    --radius-sm: calc(var(--radius) - 0.25rem);
+    --radius-md: calc(var(--radius) - 0.125rem);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 0.25rem);
+    --radius-2xl: calc(var(--radius) + 0.75rem);
+
+    --shadow-*: initial;
+    --shadow-sm: 0 1px 2px 0 rgb(15 23 42 / 0.06);
+    --shadow-float: 0 12px 32px -8px rgb(15 23 42 / 0.18);
+
+    --animate-rise: rise 600ms cubic-bezier(0.22, 1, 0.36, 1) both;
+
+    @keyframes rise {
+        from {
+            opacity: 0;
+            transform: translateY(16px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+}
+
+@layer components {
+    .input {
+        @apply min-h-11 w-full min-w-0 rounded-lg border border-border bg-surface px-3 py-2.5 text-base sm:text-sm text-foreground outline-none transition-colors focus:border-primary focus:ring-2 focus:ring-primary/15 disabled:bg-background disabled:text-muted-foreground;
+    }
+
+    .skip-link {
+        @apply sr-only z-50 rounded-lg bg-primary px-4 py-3 text-sm font-bold text-primary-foreground focus:not-sr-only focus:fixed focus:top-3 focus:left-3;
+    }
+
+    /* Homepage Hero — Warm Frosted Glass */
+    .hero-search-panel {
+        background: rgba(245, 237, 226, 0.92);
+
+        border: 1px solid rgba(255, 255, 255, 0.45);
+
+        backdrop-filter: blur(14px) saturate(110%);
+        -webkit-backdrop-filter: blur(14px) saturate(110%);
+
+        box-shadow: 0 20px 55px -18px rgba(15, 23, 42, 0.42);
+    }
+
+    /* Fields: slightly brighter than the parent panel */
+    .hero-search-panel [data-slot='select-trigger'] {
+        background: rgba(255, 252, 248, 0.94);
+        border-color: rgba(153, 131, 110, 0.3);
+    }
+
+    /* Warm, readable field labels */
+    .hero-search-panel [data-slot='label'] {
+        color: #625548;
+    }
+
+    /* Separator above suggested locations */
+    .hero-search-panel nav {
+        border-color: rgba(120, 100, 82, 0.2);
+    }
+
+    /* Suggested location chips */
+    .hero-search-panel nav a {
+        background: rgba(255, 252, 248, 0.48);
+        border-color: rgba(153, 131, 110, 0.25);
+    }
+
+    /* Keep TroPro teal as the interaction accent */
+    .hero-search-panel nav a:hover {
+        border-color: var(--primary);
+        background: rgba(255, 252, 248, 0.8);
+    }
 }
 
 @layer base {
-  body {
-    font-family: var(--font-sans);
-    color: var(--color-on-surface);
-    background-color: var(--color-background);
-  }
+    button,
+    a,
+    input,
+    select,
+    textarea {
+        -webkit-tap-highlight-color: transparent;
+    }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: var(--font-headline);
-  }
+    button:not(:disabled),
+    select {
+        cursor: pointer;
+    }
+
+    :focus-visible {
+        outline: 2px solid var(--primary);
+        outline-offset: 3px;
+    }
+
+    input,
+    select,
+    textarea {
+        scroll-margin-top: 6rem;
+    }
+
+    [aria-invalid='true'] {
+        border-color: var(--danger);
+    }
+
+    h1,
+    h2,
+    h3 {
+        text-wrap: balance;
+    }
 }
 
-.material-symbols-outlined {
-  font-family: 'Material Symbols Outlined';
-  font-weight: normal;
-  font-style: normal;
-  font-size: 20px;
-  line-height: 1;
-  letter-spacing: normal;
-  text-transform: none;
-  display: inline-block;
-  white-space: nowrap;
-  word-wrap: normal;
-  direction: ltr;
-  -webkit-font-feature-settings: 'liga';
-  -webkit-font-smoothing: antialiased;
-  vertical-align: middle;
-}
+@layer base {
+    * {
+        @apply border-border;
+    }
 
-/* Custom scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-thumb {
-  background: #bcc9c6;
-  border-radius: 4px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
+    html {
+        -webkit-text-size-adjust: 100%;
+    }
+
+    body {
+        @apply bg-background font-sans text-base text-foreground antialiased;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+        *,
+        *::before,
+        *::after {
+            animation-duration: 0.01ms !important;
+            animation-iteration-count: 1 !important;
+            transition-duration: 0.01ms !important;
+        }
+    }
 }

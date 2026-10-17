@@ -43,6 +43,7 @@ public enum ErrorCode {
     DATE_OF_BIRTH_INVALID(1118, "Date of birth is invalid", HttpStatus.BAD_REQUEST),
     OWNER_VERIFICATION_NOT_PENDING(1190, "Owner verification is not awaiting review", HttpStatus.CONFLICT),
     REVIEW_REASON_REQUIRED(1191, "A review reason is required", HttpStatus.BAD_REQUEST),
+    EMAIL_NOT_VERIFIED(1119, "Verify your email before logging in", HttpStatus.FORBIDDEN),
 
     // 1200-1299: property.
     BRANCH_NOT_FOUND(1200, "Branch not found", HttpStatus.NOT_FOUND),
@@ -67,6 +68,10 @@ public enum ErrorCode {
     SERVICE_CHARGE_NOT_FOUND(1402, "Service charge not found", HttpStatus.NOT_FOUND),
     INVALID_METER_READING(1403, "Meter readings are invalid", HttpStatus.BAD_REQUEST),
     INVALID_COST_ALLOCATION(1404, "Cost allocation does not match the charge", HttpStatus.BAD_REQUEST),
+    CONTRACT_SERVICE_NOT_FOUND(1405, "Contract service registration not found", HttpStatus.NOT_FOUND),
+    COST_ALLOCATION_PROPOSAL_NOT_FOUND(1406, "Cost allocation proposal not found", HttpStatus.NOT_FOUND),
+    MANDATORY_SERVICE_CANNOT_BE_CANCELLED(1407, "Mandatory service cannot be cancelled", HttpStatus.BAD_REQUEST),
+    SERVICE_CHARGE_ALREADY_FINALIZED(1408, "Service charge is already finalized", HttpStatus.CONFLICT),
 
     // 1500-1599: billing.
     INVOICE_NOT_FOUND(1500, "Invoice not found", HttpStatus.NOT_FOUND),

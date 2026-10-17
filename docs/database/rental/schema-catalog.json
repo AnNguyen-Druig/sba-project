@@ -11123,17 +11123,13 @@
     },
     {
       "table_name": "users",
-      "name": "users_check1",
+      "name": "users_active_requires_password",
       "type": "c",
-      "definition": "CHECK ((((status)::text <> 'ACTIVE'::text) OR ((password_hash IS NOT NULL) AND (password_hash <> ''::text) AND (((email IS NOT NULL) AND (email_verified_at IS NOT NULL)) OR ((phone IS NOT NULL) AND (phone_verified_at IS NOT NULL))))))",
+      "definition": "CHECK (((status)::text <> 'ACTIVE'::text) OR ((password_hash IS NOT NULL) AND (password_hash <> ''::text)))",
       "referenced_table": null,
       "column_numbers": [
         6,
-        4,
-        2,
-        27,
-        3,
-        28
+        4
       ],
       "referenced_numbers": null
     },
