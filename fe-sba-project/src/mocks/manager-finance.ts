@@ -534,8 +534,8 @@ export function reportSummary(e: ManagerEngine, branchId: string, month: string)
       total: slots.length,
       occupied: views
         .filter((r) => r.rentalMode === 'SLOT')
-        .reduce((s, r) => s + r.occupiedResources, 0),
-      held: views.filter((r) => r.rentalMode === 'SLOT').reduce((s, r) => s + r.heldResources, 0),
+        .reduce((s, r) => s + (r.occupiedResources || 0), 0),
+      held: views.filter((r) => r.rentalMode === 'SLOT').reduce((s, r) => s + (r.heldResources || 0), 0),
       available: slots.filter((s) => !e.overlapsRoom(s.roomId, s.id, today, tomorrow)).length,
     },
     billed: sumVnd(invoices.map((i) => i.totalAmount)),
