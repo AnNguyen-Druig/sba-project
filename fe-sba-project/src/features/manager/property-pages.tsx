@@ -7,6 +7,7 @@ import { Facts } from '@/features/tenant/components'
 import { formatVnd } from '@/lib/format'
 import { dateOnly } from '@/lib/activity'
 import { managerApi } from '@/services/manager'
+import { provider } from '@/services/config'
 import { roomInputSchema, slotInputSchema, type ManagerSlot } from '@/interfaces/manager'
 import {
   ManagerPage,
@@ -65,14 +66,14 @@ export function ManagerRooms() {
       }
     >
       <div className="flex flex-wrap gap-3">
-        <SearchBox
+        {provider('manager') === 'mock' && <SearchBox
           value={q}
           onChange={(v) => {
             setQ(v)
             setPage(1)
           }}
-        />
-        <select
+        />}
+        {provider('manager') === 'mock' && <select
           aria-label="Hình thức thuê"
           className="input w-auto"
           value={mode}
@@ -84,7 +85,7 @@ export function ManagerRooms() {
           <option value="">Tất cả hình thức</option>
           <option value="ROOM">Nguyên phòng</option>
           <option value="SLOT">Thuê chỗ</option>
-        </select>
+        </select>}
         <select
           aria-label="Loại phòng"
           className="input w-auto max-w-full"
@@ -115,7 +116,7 @@ export function ManagerRooms() {
           <option value="MAINTENANCE">Bảo trì</option>
           <option value="INACTIVE">Ngừng hoạt động</option>
         </select>
-        <select
+        {provider('manager') === 'mock' && <select
           aria-label="Khả dụng"
           className="input w-auto"
           value={availability}
@@ -128,7 +129,7 @@ export function ManagerRooms() {
           <option value="AVAILABLE">Có thể thuê</option>
           <option value="OCCUPIED">Kín chỗ / đang thuê</option>
           <option value="HELD">Đang giữ</option>
-        </select>
+        </select>}
         <input
           aria-label="Giá tham khảo tối đa"
           className="input max-w-48"
@@ -153,7 +154,7 @@ export function ManagerRooms() {
             setPage(1)
           }}
         />
-        <input
+        {provider('manager') === 'mock' && <input
           aria-label="Khả dụng từ ngày"
           type="date"
           className="input w-auto"
@@ -162,8 +163,8 @@ export function ManagerRooms() {
             setFrom(e.target.value)
             setPage(1)
           }}
-        />
-        <input
+        />}
+        {provider('manager') === 'mock' && <input
           aria-label="Khả dụng đến ngày"
           type="date"
           className="input w-auto"
@@ -172,7 +173,7 @@ export function ManagerRooms() {
             setTo(e.target.value)
             setPage(1)
           }}
-        />
+        />}
         <input
           aria-label="Sức chứa tối thiểu"
           className="input max-w-48"
@@ -217,9 +218,7 @@ export function ManagerRooms() {
                 <p>
                   {r.rentalMode === 'ROOM' ? 'Nguyên phòng' : 'Thuê chỗ'} · {r.capacity} người
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  {r.occupiedResources} đang ở · {r.heldResources} giữ
-                </p>
+            {provider('manager') === 'mock' && <p className="text-xs text-muted-foreground">{r.occupiedResources} đang ở · {r.heldResources} giữ</p>}
               </>
             ),
           },
@@ -232,7 +231,7 @@ export function ManagerRooms() {
             render: (r) => (
               <div className="flex flex-wrap gap-2">
                 <ManagerStatus value={r.operationalStatus} />
-                <ManagerStatus value={r.availability} />
+                {provider('manager') === 'mock' && <ManagerStatus value={r.availability || 'UNKNOWN'} />}
                 <span className="text-xs text-muted-foreground">
                   {r.isPublic ? 'Công khai' : 'Nội bộ'}
                 </span>
@@ -262,7 +261,7 @@ export function ManagerRoomEditor() {
     })
   const fields: FieldSpec[] = [
     { name: 'code', label: 'Mã phòng' },
-    { name: 'title', label: 'Tên phòng' },
+    ...(provider('manager') === 'mock' ? [{ name: 'title', label: 'Tên phòng' }] : []),
     {
       name: 'roomTypeId',
       label: 'Loại phòng',
@@ -281,8 +280,8 @@ export function ManagerRoomEditor() {
       ],
     },
     { name: 'capacity', label: 'Sức chứa (người)', kind: 'number', min: 1 },
-    { name: 'sizeM2', label: 'Diện tích (m²)', kind: 'number', min: 1, step: 0.1 },
-    { name: 'floor', label: 'Tầng', kind: 'number', min: 0 },
+    { name: 'sizeM2', label: 'Diện tích (m²)', kind: 'number', min: 1, step: 0.1, nullable: true },
+    { name: 'floor', label: 'Tầng', kind: 'number', min: 0, nullable: true },
     { name: 'price', label: 'Giá tham khảo (VND)', kind: 'number', min: 0 },
     { name: 'description', label: 'Mô tả', kind: 'textarea' },
     { name: 'amenities', label: 'Tiện nghi', kind: 'list', hint: 'Mỗi dòng một tiện nghi.' },
@@ -317,7 +316,7 @@ export function ManagerRoomEditor() {
       >
         <Panel>
           <ManagerForm
-            schema={roomInputSchema.omit({ images: true })}
+            schema={provider('manager') === 'real' ? roomInputSchema.omit({ images: true, title: true }) : roomInputSchema.omit({ images: true })}
             defaults={
               query.data
                 ? { ...query.data }
@@ -338,7 +337,11 @@ export function ManagerRoomEditor() {
             }
             fields={fields}
             onSubmit={(value) =>
-              setPreview({ ...value, images: images || query.data?.images || [] })
+              setPreview({
+                ...value,
+                title: value.title || `${types.data?.content.find((t) => t.id === value.roomTypeId)?.name || 'Phòng'} ${value.code}`,
+                images: images || query.data?.images || [],
+              })
             }
             pending={mutation.isPending}
             error={mutation.error}
@@ -414,7 +417,7 @@ export function ManagerRoomDetail() {
                   </h2>
                   <p className="mt-2 text-sm text-muted-foreground">{query.data.roomTypeName}</p>
                 </div>
-                <ManagerStatus value={query.data.availability} />
+                {provider('manager') === 'mock' && <ManagerStatus value={query.data.availability || 'UNKNOWN'} />}
               </div>
               <Facts
                 items={[
@@ -478,7 +481,7 @@ export function ManagerSlots() {
     [selected, setSelected] = useState<ManagerSlot | null | undefined>(undefined),
     [from, setFrom] = useState(new Date().toISOString().slice(0, 10)),
     [to, setTo] = useState(() => new Date(Date.now() + 86400000).toISOString().slice(0, 10)),
-    availability = useManagerList('slots', { roomId, size: '100', startDate: from, endDate: to }),
+    availability = useManagerList('slots', provider('manager') === 'mock' ? { roomId, size: '100', startDate: from, endDate: to } : { roomId, size: '100' }),
     mutation = useManagerAction(() => setSelected(undefined))
   return (
     <ManagerPage
@@ -492,6 +495,7 @@ export function ManagerSlots() {
         ) : (
           <>
             <div className="flex flex-wrap items-end gap-3">
+              {provider('manager') === 'mock' && <>
               <div>
                 <label className="mb-2 block text-xs" htmlFor="slot-from">
                   Từ ngày
@@ -516,6 +520,7 @@ export function ManagerSlots() {
                   onChange={(e) => setTo(e.target.value)}
                 />
               </div>
+              </>}
               <Button onClick={() => setSelected(null)}>
                 <Plus size={16} />
                 Thêm chỗ
@@ -537,13 +542,14 @@ export function ManagerSlots() {
                     </button>
                   ),
                 },
-                { label: 'Khả dụng', render: (s) => <ManagerStatus value={s.availability} /> },
-                {
+                ...(provider('manager') === 'real' ? [{ label: 'Trạng thái vận hành', render: (s: ManagerSlot) => <ManagerStatus value={s.operationalStatus} /> }] : []),
+                ...(provider('manager') === 'mock' ? [{ label: 'Khả dụng', render: (s: ManagerSlot) => <ManagerStatus value={s.availability || 'UNKNOWN'} /> }] : []),
+                ...(provider('manager') === 'mock' ? [{
                   label: 'Cư trú / lịch sử',
-                  render: (s) => (
+                  render: (s: ManagerSlot) => (
                     <div className="grid gap-2">
-                      {s.occupancy.length
-                        ? s.occupancy.map((o) => (
+                      {s.occupancy?.length
+                        ? s.occupancy!.map((o) => (
                             <div key={o.id}>
                               <ManagerLink to={`/manager/tenancies/${o.id}`}>{o.name}</ManagerLink>
                               <p className="text-xs text-muted-foreground">
@@ -555,7 +561,7 @@ export function ManagerSlots() {
                         : 'Chưa có cư trú'}
                     </div>
                   ),
-                },
+                }] : []),
               ]}
               empty="Phòng chưa có chỗ. Thêm chỗ trong giới hạn sức chứa."
             />

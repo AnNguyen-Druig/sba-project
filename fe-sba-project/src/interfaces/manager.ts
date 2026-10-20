@@ -32,8 +32,8 @@ export const roomInputSchema = z.object({
   roomTypeId: uuid,
   rentalMode: z.enum(['ROOM', 'SLOT']),
   capacity: z.number().int().min(1).max(30),
-  sizeM2: z.number().positive().max(1000),
-  floor: z.number().int().min(0).max(100),
+  sizeM2: z.number().positive().max(1000).nullable(),
+  floor: z.number().int().min(0).max(100).nullable(),
   price: vnd,
   description: z.string().max(3000),
   amenities: z.array(z.string().trim().min(1).max(80)).max(20),
@@ -43,9 +43,9 @@ export const roomInputSchema = z.object({
 })
 export const managerRoomSchema = roomSchema.extend({
   isPublic: z.boolean(),
-  availability: z.enum(['AVAILABLE', 'HELD', 'OCCUPIED', 'MAINTENANCE', 'INACTIVE']),
-  occupiedResources: z.number().int(),
-  heldResources: z.number().int(),
+  availability: z.enum(['AVAILABLE', 'HELD', 'OCCUPIED', 'MAINTENANCE', 'INACTIVE']).nullable(),
+  occupiedResources: z.number().int().nullable(),
+  heldResources: z.number().int().nullable(),
 })
 export type ManagerRoom = z.infer<typeof managerRoomSchema>
 export const roomTypeInputSchema = z.object({
@@ -66,10 +66,10 @@ export const slotSchema = slotInputSchema.extend({
   id: uuid,
   roomId: uuid,
   branchId: uuid,
-  availability: z.string(),
+  availability: z.string().nullable(),
   occupancy: z.array(
     z.object({ id: uuid, name: z.string(), startDate: date, endDate: date, status: z.string() }),
-  ),
+  ).nullable(),
 })
 export type ManagerSlot = z.infer<typeof slotSchema>
 export const managerTenancySchema = tenancySchema.extend({

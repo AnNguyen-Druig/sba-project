@@ -93,6 +93,11 @@ export async function request<T>(
     }
     if (useSession.getState().accessToken) return request(feature, path, schema, init, false)
   }
+  if (response.status === 204) {
+    const data = schema.safeParse(null)
+    if (!data.success) throw new ApiError('Phản hồi máy chủ không đúng định dạng.', response.status)
+    return data.data
+  }
   const parsed = envelope.safeParse(await response.json().catch(() => null))
   if (!parsed.success) throw new ApiError('Phản hồi máy chủ không đúng định dạng.', response.status)
   const body = parsed.data
