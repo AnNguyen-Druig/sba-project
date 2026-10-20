@@ -13,4 +13,7 @@ public interface MaintenanceAccessPolicy {
 
     /** True when the user is the Owner of the Room's Branch or its assigned Manager (BR-03). */
     boolean canManageRoom(UUID userId, UUID roomId);
+
+    /** Same rule at Branch level, for Branch-wide statistics. */
+    boolean canManageBranch(UUID userId, UUID branchId);
 }

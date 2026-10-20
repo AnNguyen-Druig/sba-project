@@ -22,4 +22,9 @@ public class PendingSecurityMaintenanceAccessPolicy implements MaintenanceAccess
     public boolean canManageRoom(UUID userId, UUID roomId) {
         return false;
     }
+
+    @Override
+    public boolean canManageBranch(UUID userId, UUID branchId) {
+        return false;
+    }
 }

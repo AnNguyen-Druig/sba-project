@@ -5,6 +5,7 @@ import com.sba.project.common.base.PagedResponse;
 import com.sba.project.modules.maintenance.dto.request.FurnitureCreateRequest;
 import com.sba.project.modules.maintenance.dto.request.FurnitureUpdateRequest;
 import com.sba.project.modules.maintenance.dto.request.FurnitureWarrantyRequest;
+import com.sba.project.modules.maintenance.dto.response.FurnitureFailureResponse;
 import com.sba.project.modules.maintenance.dto.response.FurnitureResponse;
 import com.sba.project.modules.maintenance.dto.response.FurnitureWarrantyResponse;
 import com.sba.project.modules.maintenance.enums.FurnitureStatus;
@@ -55,6 +56,20 @@ public class FurnitureController {
         PageRequest pageable = PageRequest.of(page - 1, size, Sort.by(direction, sortBy));
         return ResponseEntity.ok(ApiResponse.success(
                 furnitureService.searchFurniture(roomId, status, type, pageable)));
+    }
+
+    /** P2-29: warranties of the room's furniture that end within {@code withinDays} days. */
+    @GetMapping("/warranties/expiring")
+    public ResponseEntity<ApiResponse<List<FurnitureWarrantyResponse>>> expiringWarranties(
+            @RequestParam UUID roomId, @RequestParam @Min(1) @Max(366) int withinDays) {
+        return ResponseEntity.ok(ApiResponse.success(furnitureService.getExpiringWarranties(roomId, withinDays)));
+    }
+
+    /** P2-29: furniture reported in at least {@code minRequests} repair requests. */
+    @GetMapping("/frequent-failures")
+    public ResponseEntity<ApiResponse<List<FurnitureFailureResponse>>> frequentFailures(
+            @RequestParam UUID roomId, @RequestParam @Min(2) int minRequests) {
+        return ResponseEntity.ok(ApiResponse.success(furnitureService.getFrequentlyFailing(roomId, minRequests)));
     }
 
     @GetMapping("/{furnitureId}")

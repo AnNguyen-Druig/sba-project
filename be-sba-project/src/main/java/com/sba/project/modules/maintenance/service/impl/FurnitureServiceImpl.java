@@ -19,6 +19,8 @@ import com.sba.project.modules.maintenance.repository.ReportRequestFurnitureRepo
 import com.sba.project.modules.maintenance.service.FurnitureService;
 import com.sba.project.modules.maintenance.service.MaintenanceAccessPolicy;
 import com.sba.project.modules.maintenance.specifications.FurnitureSpecifications;
+import com.sba.project.modules.maintenance.dto.response.FurnitureFailureResponse;
+import java.time.LocalDate;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
@@ -127,6 +129,24 @@ public class FurnitureServiceImpl implements FurnitureService {
     public void deleteWarranty(UUID furnitureId, UUID warrantyId) {
         loadManagedFurniture(furnitureId);
         warrantyRepository.delete(loadWarranty(furnitureId, warrantyId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FurnitureWarrantyResponse> getExpiringWarranties(UUID roomId, int withinDays) {
+        requireRoomManager(roomId);
+        if (withinDays < 1) throw new AppException(ErrorCode.INVALID_REQUEST);
+        LocalDate today = LocalDate.now();
+        return warrantyRepository.findExpiringInRoom(roomId, today, today.plusDays(withinDays)).stream()
+                .map(furnitureMapper::toWarrantyResponse).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<FurnitureFailureResponse> getFrequentlyFailing(UUID roomId, int minRequests) {
+        requireRoomManager(roomId);
+        if (minRequests < 2) throw new AppException(ErrorCode.INVALID_REQUEST);
+        return reportRequestFurnitureRepository.findFrequentlyFailing(roomId, minRequests);
     }
 
     private Furniture loadManagedFurniture(UUID furnitureId) {
