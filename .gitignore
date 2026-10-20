@@ -24,6 +24,7 @@ target/
 application-local.properties
 application-local.yml
 application-local.yaml
+!/be-sba-project/src/main/resources/application-local.yml
 
 # Logs and OS
 *.log

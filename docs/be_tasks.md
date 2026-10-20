@@ -1,5 +1,11 @@
 # BE TASKS — WEBSITE QUẢN LÝ PHÒNG TRỌ (SBA301)
 
+Điều chỉnh chính thức: 34 bảng (32 + 1 + 1), thay thế phần lưu trữ D04/D18/D33/D39 trước đây. USERS là hồ sơ duy nhất; CONTRACT_TENANTS tham chiếu tenant_user_id. Các task DEFERRED giữ ID và điểm ước lượng gốc để truy vết; tổng 211 mã/709 điểm không phải cam kết triển khai toàn bộ phạm vi hiện tại. Xem database/rental/REFACTOR_REPORT.md.
+
+
+Cập nhật thiết kế D01–D40: 2026-10-12 — xem database/rental/REFACTOR_REPORT.md. Giữ nguyên 211 feature ID; DDL chưa đồng nghĩa task backend đã hoàn thành. “Cọc giữ chỗ” là Booking Hold; hợp đồng dùng PREPAID_RENT, không SECURITY_DEPOSIT. Quyết định mới thay thế các mô tả cũ mâu thuẫn.
+
+
 > **File:** `be_tasks.md`  
 > **Nguồn chính:** `all-feature.txt` (211 dòng tính năng có mã ID; Phase 1 = 138, Phase 2 = 39, Phase 3 = 34).  
 > **Tham chiếu nghiệp vụ:** `features.txt`, các xác nhận mới nhất của nhóm và ERD hiện tại trong `All_Diagrams.drawio`.  
@@ -15,7 +21,7 @@
 - Một **BE-XX.Y** là **task lớn (work package/epic)** có thể giao và kiểm thử; các checkbox phía dưới là feature/backend acceptance items nằm trong epic. Không nên chỉ đếm số checkbox để đánh giá công bằng.
 - **Độ khó ước lượng:** `0` = chỉ là ghi chú, không phải task code; `1` = nhỏ; `2` = thao tác đơn giản; `3` = nghiệp vụ bình thường; `4` = nghiệp vụ khó/đa quy tắc; `5` = tích hợp ngoài/cạnh tranh dữ liệu/tiền. Đây là điểm tương đối để chia việc, **không phải ngày công**.
 - Student 1 thống nhất security/authorization; Student 4 thống nhất notification event; Student 5 thống nhất trạng thái thanh toán; Student 6 hỗ trợ conventions/CI và integration test. **Mọi người vẫn phải viết validation và test cho API mình làm.**
-- **Chưa chốt:** tài khoản có nhiều role đồng thời hay một vai trò hoạt động; chính sách tiền cọc/hạn giữ; cách tính ngày ở ghép; quyền chốt/sửa hóa đơn; tiền chuyển dư/thiếu. Không tự hardcode chính sách chưa được nhóm duyệt.
+- **Đã chốt D01–D40:** N–N roles, Contract chính theo Room, nghĩa vụ/Invoice theo ContractTenant, chia phí theo ngày cư trú, PREPAID_RENT tháng đầu/cuối và QR thủ công hoặc Sandbox. Các mức tiền/thời hạn và xử lý rời sớm còn mở.
 - **Ghi chú chỉ có trong nguồn:** `[P1-67]` (Phase 1 không yêu cầu ký OTP/PDF hợp đồng), `[P3-23]` (ký OTP mô phỏng không mặc định có giá trị pháp lý tương đương ký số). Hai mã này vẫn được giữ để đối chiếu, nhưng điểm phát triển = 0.
 
 ## 0.1. Bảng cân bằng công việc
@@ -26,11 +32,11 @@
 | Student 2 | Room – Slot / tìm kiếm công khai / Appointment / API đọc & dashboard | 29 / 66 | 7 / 27 | 7 / 30 | **43 / 123** | **9** |
 | Student 3 | Booking – cọc giữ chỗ / Contract / liên kết Zalo cho Tenant | 22 / 72 | 5 / 18 | 7 / 28 | **34 / 118** | **9** |
 | Student 4 | Services – điện nước – phân bổ chi phí / Notification | 20 / 72 | 5 / 17 | 6 / 24 | **31 / 113** | **8** |
-| Student 5 | Invoice – công nợ – Payment – đối soát VietQR | 17 / 73 | 7 / 28 | 4 / 20 | **28 / 121** | **8** |
+| Student 5 | Invoice – công nợ – Payment – QR thủ công/Sandbox | 17 / 73 | 7 / 28 | 4 / 20 | **28 / 121** | **8** |
 | Student 6 | Tenant – CSVC – sửa chữa / kiểm thử tích hợp – deploy / Thread nền tảng | 26 / 71 | 8 / 33 | 5 / 17 | **39 / 121** | **9** |
 | **Tổng** | **211 mã từ nguồn** | **138 / 422** | **39 / 145** | **34 / 142** | **211 / 709** | **52** |
 
-> **Ý nghĩa công bằng:** Phần quan trọng nhất là Phase 1 được giữ gần nhau về **điểm độ khó**; một số Student có nhiều mã tra cứu/CRUD nhỏ, trong khi Student 5 có ít mã hơn nhưng phụ trách đối soát ngân hàng, công nợ và tính nhất quán tài chính. Điểm là ước lượng chủ quan, cần điều chỉnh nếu dự án thực tế chênh lệch.
+> **Ý nghĩa công bằng:** Phần quan trọng nhất là Phase 1 được giữ gần nhau về **điểm độ khó**; một số Student có nhiều mã tra cứu/CRUD nhỏ, trong khi Student 5 có ít mã hơn nhưng phụ trách xác minh thanh toán, công nợ và tính nhất quán tài chính. Điểm là ước lượng chủ quan, cần điều chỉnh nếu dự án thực tế chênh lệch.
 
 ## 0.2. Definition of Done chung cho mỗi work package
 
@@ -55,9 +61,9 @@
 - [ ] **[P1-01]** Đăng ký tài khoản Owner bằng email hoặc số điện thoại; kiểm tra trùng và tính hợp lệ.  _(độ khó 4/5)_
 - [ ] **[P1-02]** Đăng ký tài khoản người dùng tìm phòng (chưa cần là Tenant).  _(độ khó 1/5)_
 - [ ] **[P1-03]** Đăng nhập bằng email + mật khẩu HOẶC số điện thoại + mật khẩu.  _(độ khó 4/5)_
-- [ ] **[P1-04]** Đăng xuất, làm mới phiên/access token, vô hiệu hóa phiên không còn hợp lệ.  _(độ khó 2/5)_
-- [ ] **[P1-05]** Xác minh email/số điện thoại khi kích hoạt tài khoản; giới hạn thời gian và số lần thử mã xác minh.  _(độ khó 4/5)_
-- [ ] **[P1-06]** Quên mật khẩu, đặt lại/đổi mật khẩu an toàn.  _(độ khó 2/5)_
+- [ ] **[P1-04]** Logout/refresh tối giản trên USERS: một refresh_token_hash và hạn dùng mỗi User; rotate bằng transaction/CAS, logout xóa token và tăng auth_version khi cần. Không đa phiên độc lập.  _(độ khó 2/5)_
+- [ ] **[P1-05]** Một verification challenge hiện hành trên USERS: purpose, hash, expiry, số lần thử, consumed_at; backend xác minh và vô hiệu mã cũ, không audit secret/hash.  _(độ khó 4/5)_
+- [ ] **[P1-06]** Quên/đặt lại mật khẩu dùng challenge hiện hành trên USERS; thay mục đích phải tạo hash mới, không tạo bảng token riêng.  _(độ khó 2/5)_
 - [ ] **[P1-07]** Xem/cập nhật hồ sơ cá nhân; quản lý trạng thái hoạt động/khóa tài khoản.  _(độ khó 2/5)_
 
 **Ước lượng task lớn:** 7 mã nguồn, 19 điểm.
@@ -66,10 +72,10 @@
 
 **Quy tắc/điều kiện tích hợp:** Quyền phải kiểm tra trên server và trong phạm vi Branch/hợp đồng, kể cả khi người dùng có nhiều ngữ cảnh truy cập.
 
-- [ ] **[P1-09]** Owner/Manager tạo hoặc mời tài khoản Manager/Tenant theo quyền; ngăn tạo trùng người dùng không cần thiết.  _(độ khó 4/5)_
-- [ ] **[P1-10]** Phân quyền OWNER, MANAGER, TENANT, ADMIN và ngữ cảnh GUEST; giới hạn dữ liệu theo Branch, hợp đồng và người thực hiện.  _(độ khó 5/5)_
+- [ ] **[P1-09]** Tạo/mời USERS trạng thái INVITED, có thể chưa email/phone/password; không được đăng nhập hay nhận quyền từ lời mời. Xác nhận danh tính trước liên kết, tránh tạo trùng người.  _(độ khó 4/5)_
+- [ ] **[P1-10]** Phân quyền USERS N–N ROLES qua USER_ROLES: USER, OWNER, MANAGER, TENANT, ADMIN; GUEST là ngữ cảnh chưa đăng nhập. Kiểm tra phạm vi Owner/Branch/nghĩa vụ thuê.  _(độ khó 5/5)_
 - [ ] **[P1-11]** Kiểm soát truy cập người tìm phòng đã đăng nhập đối với đặt lịch, giữ phòng; cho phép GUEST chỉ đọc dữ liệu công khai.  _(độ khó 2/5)_
-- [ ] **[P1-12]** Mã hóa/băm mật khẩu, hạn chế thử đăng nhập nhiều lần, bảo vệ thông tin định danh nhạy cảm.  _(độ khó 2/5)_
+- [ ] **[P1-12]** Băm mật khẩu/token; failed_login_count/last_failed_login_at/locked_until trên USERS và rate limiting backend/cache, không lưu lịch sử từng lần login.  _(độ khó 2/5)_
 
 **Ước lượng task lớn:** 4 mã nguồn, 13 điểm.
 
@@ -88,13 +94,13 @@
 
 **Ước lượng task lớn:** 8 mã nguồn, 19 điểm.
 
-### BE-01.4 — Tài khoản nhận tiền của Owner và phát hành VietQR
+### BE-01.4 — QR theo Branch và tham chiếu thanh toán
 
 **Quy tắc/điều kiện tích hợp:** Tài khoản nhận tiền thuộc Owner; mã tham chiếu riêng cho hóa đơn/booking; Student 5 chịu trách nhiệm xác thực giao dịch thực nhận.
 
-- [ ] **[P1-96]** Owner thiết lập/chọn tài khoản ngân hàng nhận tiền; cho phép chọn cấu hình nhận tiền theo từng Branch.  _(độ khó 4/5)_
-- [ ] **[P1-97]** Sinh thông tin VietQR kèm số tiền cần chuyển và mã tham chiếu duy nhất cho hóa đơn hoặc tiền cọc booking.  _(độ khó 4/5)_
-- [ ] **[P1-98]** Tiền chuyển trực tiếp vào tài khoản thuộc quyền kiểm soát của Owner; hệ thống không tự giữ tiền.  _(độ khó 1/5)_
+- [ ] **[P1-96]** Owner cấu hình ảnh QR thủ công trên Branch bằng Cloudinary; không tạo owner_bank_accounts hoặc bắt buộc kết nối ngân hàng thật.  _(độ khó 4/5)_
+- [ ] **[P1-97]** Hiển thị QR đã tải lên, số tiền và tham chiếu; hoặc gọi VNPay/MoMo Sandbox theo Payment của nhà cung cấp được chọn; không tạo payment_requests.  _(độ khó 4/5)_
+- [ ] **[P1-98]** QR thủ công chuyển tiền trực tiếp đến Owner; Sandbox có môi trường riêng và không được tính vào tiền thật.  _(độ khó 1/5)_
 
 **Ước lượng task lớn:** 3 mã nguồn, 9 điểm.
 
@@ -136,9 +142,9 @@
 
 **Quy tắc/điều kiện tích hợp:** Chỉ thực hiện khi Phase 3 được duyệt; phối hợp Student 6 (Thread), Student 4 (thông báo kết quả).
 
-- [ ] **[P3-12]** Người dùng báo cáo Thread/bình luận vi phạm với lý do và thông tin chứng minh.  _(độ khó 4/5)_
-- [ ] **[P3-13]** ADMIN xem hàng đợi báo cáo; duyệt, bác bỏ, ẩn nội dung vi phạm và ghi nhận quyết định.  _(độ khó 5/5)_
-- [ ] **[P3-15]** Chống spam, giới hạn tần suất đăng Thread/bình luận/đề xuất; lưu lịch sử xử lý vi phạm.  _(độ khó 4/5)_
+- [ ] **[P3-12]** DEFERRED — Quy trình người dùng báo cáo vi phạm độc lập; không moderation_reports hoặc JSONB thay thế.  _(độ khó 4/5)_
+- [ ] **[P3-13]** ADMIN ẩn/đóng Thread cơ bản bằng status/moderated_by/moderated_at/moderation_reason; hàng đợi báo cáo vi phạm DEFERRED.  _(độ khó 5/5)_
+- [ ] **[P3-15]** Rate limiting tạo/chỉnh Thread ở backend; phần Comment/Suggestion và hệ thống lịch sử vi phạm chi tiết DEFERRED.  _(độ khó 4/5)_
 
 **Ước lượng task lớn:** 3 mã nguồn, 13 điểm.
 
@@ -225,7 +231,7 @@
 - [ ] **[P1-128]** Manager xem số liệu giới hạn trong các Branch được phân công.  _(độ khó 1/5)_
 - [ ] **[P1-129]** Thống kê tổng tiền phải thu, tiền ĐÃ THU THỰC TẾ, công nợ, hóa đơn quá hạn theo kỳ/Branch.  _(độ khó 4/5)_
 - [ ] **[P1-130]** Thống kê số booking, hợp đồng hiệu lực, yêu cầu sửa chữa theo trạng thái cơ bản.  _(độ khó 1/5)_
-- [ ] **[P1-131]** Doanh thu được tính từ khoản thanh toán hợp lệ, không đánh đồng số tiền đã xuất hóa đơn với tiền thực nhận.  _(độ khó 1/5)_
+- [ ] **[P1-131]** Tách tiền thật thực nhận, tiền lập Invoice, nợ, Booking Hold, trả trước chưa dùng, tiền hoàn và doanh thu theo kỳ; không đếm lại trả trước khi áp dụng, không gộp Sandbox.  _(độ khó 1/5)_
 
 **Ước lượng task lớn:** 7 mã nguồn, 12 điểm.
 
@@ -258,11 +264,11 @@
 
 **Quy tắc/điều kiện tích hợp:** Chỉ đề xuất phòng thuộc Branch được phép; gợi ý gần đúng phải chỉ ra điều kiện phù hợp/chưa phù hợp; phối hợp Student 6 về Thread.
 
-- [ ] **[P3-05]** Owner/Manager có thể đề xuất những Room/Slot còn khả dụng thuộc Branch mình quản lý.  _(độ khó 4/5)_
-- [ ] **[P3-06]** Đánh giá mức độ phù hợp theo tiêu chí có cấu trúc; CHO PHÉP GỢI Ý GẦN ĐÚNG, không buộc khớp 100%.  _(độ khó 5/5)_
-- [ ] **[P3-07]** Hiển thị tiêu chí khớp/chưa khớp và mức độ phù hợp; không trình bày gợi ý gần đúng thành 'đáp ứng đủ điều kiện'.  _(độ khó 4/5)_
-- [ ] **[P3-08]** Chống gửi lặp đề xuất cùng một phòng tới cùng Thread ngoài các trường hợp được phép cập nhật.  _(độ khó 4/5)_
-- [ ] **[P3-09]** Khi phòng không còn khả dụng hoặc tiêu chí thay đổi, cập nhật tính phù hợp của đề xuất.  _(độ khó 5/5)_
+- [ ] **[P3-05]** DEFERRED — Đề xuất Room/Slot vào Thread hoãn đến vòng mở rộng.  _(độ khó 4/5)_
+- [ ] **[P3-06]** DEFERRED — Chấm mức độ phù hợp của đề xuất phòng trong Thread; chưa có dữ liệu đề xuất.  _(độ khó 5/5)_
+- [ ] **[P3-07]** DEFERRED — Giải thích tiêu chí khớp/chưa khớp cho đề xuất Thread.  _(độ khó 4/5)_
+- [ ] **[P3-08]** DEFERRED — Chống trùng đề xuất Room/Slot cho Thread.  _(độ khó 4/5)_
+- [ ] **[P3-09]** DEFERRED — Cập nhật đề xuất Thread khi khả dụng thay đổi.  _(độ khó 5/5)_
 
 **Ước lượng task lớn:** 5 mã nguồn, 22 điểm.
 
@@ -294,7 +300,7 @@
 **Quy tắc/điều kiện tích hợp:** Booking có thể phát sinh khi người dùng chưa là Tenant; phân biệt phòng nguyên căn và slot.
 
 - [ ] **[P1-49]** Người dùng đã đăng nhập gửi yêu cầu giữ nguyên phòng hoặc giữ một slot còn khả dụng; khai báo ngày dự kiến nhận phòng.  _(độ khó 4/5)_
-- [ ] **[P1-50]** Tính và thông báo mức tiền cọc phải thanh toán để giữ chỗ theo chính sách được Owner/Manager công bố.  _(độ khó 4/5)_
+- [ ] **[P1-50]** Tính Booking Hold theo phiên bản chính sách Branch và lưu snapshot; không tự đặt mức tiền mặc định.  _(độ khó 4/5)_
 - [ ] **[P1-51]** Owner/Manager xem, chấp thuận/từ chối yêu cầu; Tenant/khách xem trạng thái yêu cầu của mình.  _(độ khó 2/5)_
 
 **Ước lượng task lớn:** 3 mã nguồn, 10 điểm.
@@ -303,10 +309,10 @@
 
 **Quy tắc/điều kiện tích hợp:** Chỉ giữ chỗ sau khi cọc được đối soát; bảo vệ đồng thời hai khách đặt cùng tài nguyên.
 
-- [ ] **[P1-52]** Sinh hướng dẫn thanh toán tiền cọc giữ phòng và mã tham chiếu giao dịch riêng; xác minh khoản tiền cọc thực nhận.  _(độ khó 4/5)_
+- [ ] **[P1-52]** Hướng dẫn QR thủ công hoặc sandbox đã chọn, mã tham chiếu riêng; chỉ giữ chỗ khi Payment đã được xác minh đủ tiền.  _(độ khó 4/5)_
 - [ ] **[P1-53]** Chỉ xác nhận giữ phòng thành công sau khi khoản cọc yêu cầu đã được đối soát hợp lệ.  _(độ khó 5/5)_
 - [ ] **[P1-54]** Ngăn hai yêu cầu/hợp đồng chiếm giữ trùng một phòng nguyên căn hoặc cùng một slot trong khoảng thời gian xung đột.  _(độ khó 5/5)_
-- [ ] **[P1-55]** Quy định hạn thanh toán tiền cọc và thời gian hết hiệu lực giữ chỗ; quá hạn thì giải phóng khả dụng theo chính sách.  _(độ khó 4/5)_
+- [ ] **[P1-55]** Hạn thanh toán và thời gian giữ chỗ cấu hình theo Branch; hết hạn giải phóng ResourceAllocation trong transaction, tiền đến muộn để chờ xử lý.  _(độ khó 4/5)_
 
 **Ước lượng task lớn:** 4 mã nguồn, 18 điểm.
 
@@ -315,7 +321,7 @@
 **Quy tắc/điều kiện tích hợp:** Hoàn/khấu trừ cọc theo chính sách nhóm chốt, không tự ý đặt mức phí hoặc hạn giữ phòng.
 
 - [ ] **[P1-56]** Cho phép hủy booking, lưu lý do và tình trạng xử lý tiền cọc/hoàn cọc theo chính sách đã công bố.  _(độ khó 4/5)_
-- [ ] **[P1-57]** Liên kết booking đã duyệt với bước tạo hợp đồng; không buộc khách đã có hợp đồng mới được đặt.  _(độ khó 4/5)_
+- [ ] **[P1-57]** Booking tạo Contract chính của Room và ContractTenant đầu tiên, hoặc thêm ContractTenant vào Contract hiện có; source_booking_id nằm ở ContractTenant và là UNIQUE.  _(độ khó 4/5)_
 - [ ] **[P1-58]** Ghi nhận lịch sử chuyển trạng thái booking; chống xử lý đồng thời làm giữ chỗ trùng.  _(độ khó 5/5)_
 
 **Ước lượng task lớn:** 3 mã nguồn, 13 điểm.
@@ -324,11 +330,11 @@
 
 **Quy tắc/điều kiện tích hợp:** Một hợp đồng có đúng một người đại diện khi hiệu lực; ngăn trùng đối tượng thuê cùng thời gian.
 
-- [ ] **[P1-59]** Owner/Manager tạo, xem, cập nhật bản nháp và quản lý trạng thái Contract.  _(độ khó 2/5)_
-- [ ] **[P1-60]** Tạo hợp đồng từ booking phù hợp hoặc tạo hợp đồng quản lý trực tiếp theo quy trình cho thuê.  _(độ khó 2/5)_
-- [ ] **[P1-61]** Ghi nhận thời hạn thuê, tiền thuê, tiền cọc, điều khoản thanh toán và các điều khoản thuê cơ bản.  _(độ khó 4/5)_
+- [ ] **[P1-59]** Contract chính thuộc Room, hỗ trợ ROOM/SLOT; thành viên thuê slot chia sẻ Contract chính nhưng có thỏa thuận và nghĩa vụ riêng.  _(độ khó 2/5)_
+- [ ] **[P1-60]** Tạo Contract chính hoặc thêm thành viên từ Booking phù hợp; hỗ trợ tạo trực tiếp không cần Booking.  _(độ khó 2/5)_
+- [ ] **[P1-61]** Contract lưu điều khoản chung; ContractTenant lưu tiền thuê, tháng lẻ thỏa thuận, PREPAID_RENT tháng đầu/cuối và điều khoản riêng. Phase 1 không có SECURITY_DEPOSIT.  _(độ khó 4/5)_
 - [ ] **[P1-62]** Hợp đồng hỗ trợ đối tượng thuê nguyên phòng hoặc thuê theo slot; ngăn xung đột thuê cùng tài nguyên.  _(độ khó 5/5)_
-- [ ] **[P1-63]** Thêm/gỡ người tham gia hợp đồng theo quy tắc; mỗi hợp đồng có đúng 01 người đại diện khi bắt đầu có hiệu lực.  _(độ khó 4/5)_
+- [ ] **[P1-63]** Thành viên vào/rời có lịch sử; Contract ACTIVE có đúng một đại diện ACTIVE. Đổi đại diện không ghi đè nghĩa vụ cá nhân.  _(độ khó 4/5)_
 
 **Ước lượng task lớn:** 5 mã nguồn, 17 điểm.
 
@@ -338,7 +344,7 @@
 
 - [ ] **[P1-64]** Chuyển trạng thái bản nháp, hiệu lực, hết hạn, đã kết thúc/hủy theo điều kiện nghiệp vụ hợp lệ.  _(độ khó 4/5)_
 - [ ] **[P1-65]** Tenant được xem hợp đồng của mình; Owner/Manager chỉ xem/sửa hợp đồng thuộc phạm vi quản lý.  _(độ khó 1/5)_
-- [ ] **[P1-66]** Khi hợp đồng có hiệu lực, cập nhật trạng thái phòng/slot và thông tin người đang cư trú; tránh trùng lịch thuê.  _(độ khó 5/5)_
+- [ ] **[P1-66]** Chuyển giữ chỗ sang thuê trong một transaction; ResourceAllocation khóa tài nguyên, RoomSlotOccupancy lưu khoảng cư trú thực tế [start,end).  _(độ khó 5/5)_
 - [ ] **[P1-67]** Ở Phase 1 KHÔNG bắt buộc ký bằng OTP, chữ ký điện tử hoặc tạo file PDF hợp đồng.  _(độ khó 0/5)_
 
 **Ước lượng task lớn:** 4 mã nguồn, 10 điểm.
@@ -359,7 +365,7 @@
 
 **Quy tắc/điều kiện tích hợp:** Liên kết Student 5 để thực hiện các bút toán hoàn/khấu trừ có xác nhận.
 
-- [ ] **[P2-13]** Hoàn thiện các tình huống hủy/hoàn cọc, khấu trừ, chuyển cọc sang hợp đồng và đối chiếu lịch sử tiền cọc.  _(độ khó 5/5)_
+- [ ] **[P2-13]** Hoàn thiện hủy/hoàn Booking Hold và chuyển sang PREPAID_RENT có audit trên cùng Payment; không thêm lần thu tiền. Chính sách cụ thể cần phê duyệt.  _(độ khó 5/5)_
 
 **Ước lượng task lớn:** 1 mã nguồn, 5 điểm.
 
@@ -368,8 +374,8 @@
 **Quy tắc/điều kiện tích hợp:** Không cho sửa hợp đồng kết thúc trái trạng thái, giữ lịch sử thay đổi.
 
 - [ ] **[P2-15]** Tìm kiếm/lọc hợp đồng theo Tenant, phòng, Branch, ngày bắt đầu/hết hạn, trạng thái.  _(độ khó 1/5)_
-- [ ] **[P2-16]** Nhắc hợp đồng sắp hết hạn; gia hạn/điều chỉnh kỳ thuê theo quy trình có kiểm soát.  _(độ khó 4/5)_
-- [ ] **[P2-17]** Quy trình thông báo trả phòng, kiểm tra tình trạng ở và kết thúc hợp đồng.  _(độ khó 4/5)_
+- [ ] **[P2-16]** Nhắc hết hạn, gia hạn và thay điều khoản qua CONTRACT_AMENDMENTS có version/effective_from; giữ nguyên thỏa thuận gốc đã duyệt.  _(độ khó 4/5)_
+- [ ] **[P2-17]** Yêu cầu → duyệt → chuyển đi lưu trên CONTRACT_TENANTS và AUDIT; chỉ giữ một yêu cầu hiện hành, không kết thúc nghĩa vụ người ở ghép khác.  _(độ khó 4/5)_
 - [ ] **[P2-20]** Khóa các trạng thái không hợp lệ, hạn chế sửa nội dung hợp đồng đã kết thúc; lưu lịch sử thay đổi.  _(độ khó 4/5)_
 
 **Ước lượng task lớn:** 4 mã nguồn, 13 điểm.
@@ -380,12 +386,12 @@
 
 **Quy tắc/điều kiện tích hợp:** Bản ký OTP chỉ là mô phỏng, không mặc định tương đương chữ ký số được chứng nhận; P3-23 là ghi chú tuân thủ.
 
-- [ ] **[P3-17]** Sinh PDF hợp đồng từ dữ liệu đã chốt, hỗ trợ tải/xem bản PDF.  _(độ khó 5/5)_
-- [ ] **[P3-18]** Gửi OTP cho các bên tham gia ký; kiểm tra hiệu lực, số lần thử và đúng người ký.  _(độ khó 5/5)_
-- [ ] **[P3-19]** Ghi nhận thời điểm, người ký, phiên bản nội dung và bằng chứng xác nhận OTP.  _(độ khó 5/5)_
-- [ ] **[P3-20]** Quản lý luồng ký phía Tenant và Owner/người được ủy quyền, cập nhật trạng thái chờ ký/đã ký.  _(độ khó 5/5)_
-- [ ] **[P3-21]** Khóa nội dung đã xác nhận; thay đổi sau ký phải đi qua phiên bản/phụ lục được kiểm soát.  _(độ khó 4/5)_
-- [ ] **[P3-22]** Hỗ trợ tạo/xác nhận phụ lục, gia hạn, biên bản thanh lý bằng luồng mô phỏng tương tự.  _(độ khó 4/5)_
+- [ ] **[P3-17]** PDF Cloudinary chính tham chiếu tại CONTRACTS, phụ lục/phiên bản bổ sung tại CONTRACT_AMENDMENTS; không bảng documents riêng.  _(độ khó 5/5)_
+- [ ] **[P3-18]** EXTENSION NOT IMPLEMENTED — OTP ký mô phỏng dùng challenge hash hiện hành USERS, ràng buộc đúng tài liệu/người ký tại backend; chưa có luồng gửi/kiểm tra OTP hoàn chỉnh.  _(độ khó 5/5)_
+- [ ] **[P3-19]** EXTENSION NOT IMPLEMENTED — Bằng chứng xác nhận tối thiểu trong confirmation_evidence của CONTRACTS/CONTRACT_AMENDMENTS: signer, thời điểm, content hash; không OTP plaintext/hash trong evidence/audit.  _(độ khó 5/5)_
+- [ ] **[P3-20]** EXTENSION NOT IMPLEMENTED — Backend kiểm tra danh sách signer và trạng thái ký mô phỏng trong transaction; JSONB không thay thế FK/authorization.  _(độ khó 5/5)_
+- [ ] **[P3-21]** Khóa document snapshot đã phát hành xác nhận; sau xác nhận muốn đổi tạo amendment mới, không ghi đè nội dung đã duyệt.  _(độ khó 4/5)_
+- [ ] **[P3-22]** EXTENSION NOT IMPLEMENTED — Tài liệu phụ lục/gia hạn/thanh lý dùng CONTRACT_AMENDMENTS và Cloudinary, bằng chứng ký tối giản.  _(độ khó 4/5)_
 - [ ] **[P3-23]** LƯU Ý: Đây là ký OTP MÔ PHỎNG trong dự án môn học, không mặc nhiên là chữ ký số được chứng nhận có giá trị pháp lý tương đương.  _(độ khó 0/5)_
 
 **Ước lượng task lớn:** 7 mã nguồn, 28 điểm.
@@ -413,7 +419,7 @@
 - [ ] **[P1-70]** Điện, nước là dịch vụ mặc định; không cho Tenant tự hủy. Dịch vụ tiêu thụ 0 thì phí theo mức tiêu thụ bằng 0.  _(độ khó 2/5)_
 - [ ] **[P1-71]** Các dịch vụ bổ sung là tùy chọn; Tenant xem dịch vụ và gửi đăng ký/hủy dịch vụ đã đăng ký.  _(độ khó 4/5)_
 - [ ] **[P1-72]** Owner/Manager xem và xử lý việc đăng ký/hủy dịch vụ tùy chọn; kiểm tra quyền thuê hợp lệ và kỳ hiệu lực.  _(độ khó 4/5)_
-- [ ] **[P1-73]** Quản lý dịch vụ áp dụng cho phòng và dịch vụ gắn với hợp đồng; xác định ngày bắt đầu/kết thúc áp dụng.  _(độ khó 2/5)_
+- [ ] **[P1-73]** Dịch vụ theo Branch → Room → Contract → ContractTenant; thời hạn và giá ghi đè có snapshot. Điện/nước bắt buộc, dịch vụ tùy chọn phải duyệt.  _(độ khó 2/5)_
 
 **Ước lượng task lớn:** 6 mã nguồn, 20 điểm.
 
@@ -421,7 +427,7 @@
 
 **Quy tắc/điều kiện tích hợp:** Lượng dùng không âm; tính phí đúng kỳ; giá mới không sửa hóa đơn đã phát hành.
 
-- [ ] **[P1-74]** Nhập và kiểm tra chỉ số điện/nước đầu kỳ, cuối kỳ; không chấp nhận mức sử dụng âm hoặc dữ liệu bất hợp lệ.  _(độ khó 4/5)_
+- [ ] **[P1-74]** Nhập chỉ số điện/nước trực tiếp trong RoomServiceCharge theo segment; hỗ trợ thay/reset đồng hồ và đổi giá, không tạo bảng Meter riêng.  _(độ khó 4/5)_
 - [ ] **[P1-75]** Tính lượng dùng, đơn giá, tổng tiền cho từng phòng và kỳ thanh toán; hạn chế tính trùng một khoản.  _(độ khó 5/5)_
 - [ ] **[P1-76]** Tính dịch vụ kiểu theo chỉ số, theo người, theo phòng, cố định hoặc theo lượt theo cấu hình được phép.  _(độ khó 4/5)_
 - [ ] **[P1-77]** Khi thay đổi đơn giá, chỉ áp dụng cho các kỳ tính phí phù hợp; không tự sửa hóa đơn đã phát hành.  _(độ khó 4/5)_
@@ -431,10 +437,10 @@
 
 ### BE-04.3 — Chia phí giữa các Tenant
 
-**Quy tắc/điều kiện tích hợp:** Mặc định chia đều; Tenant đề xuất thay đổi, Manager/Owner duyệt; tổng phân bổ phải khớp phí gốc.
+**Quy tắc/điều kiện tích hợp:** Mặc định theo ngày cư trú; Tenant đề xuất thay đổi, Manager/Owner duyệt; tổng phân bổ phải khớp phí gốc.
 
-- [ ] **[P1-79]** Mặc định chia đều tiền điện/nước theo người đang cư trú trong kỳ; tránh phân bổ cho người không có nghĩa vụ trong kỳ.  _(độ khó 4/5)_
-- [ ] **[P1-80]** Tenant gửi yêu cầu điều chỉnh tỷ lệ/số tiền điện, nước theo thực tế sử dụng; nêu lý do và phương án chia.  _(độ khó 4/5)_
+- [ ] **[P1-79]** Mặc định chia phí theo ngày cư trú thực tế giao với kỳ/segment; làm tròn VND bằng largest remainder, hòa thì theo UUID; tổng trọng số 0 phải báo lỗi.  _(độ khó 4/5)_
+- [ ] **[P1-80]** Tenant gửi CostAllocationProposal với allocation_details JSONB và lý do; không có bảng cost_allocation_items.  _(độ khó 4/5)_
 - [ ] **[P1-81]** Manager/Owner xem, chấp thuận hoặc từ chối yêu cầu; ghi nhận phương án phân bổ cuối cùng.  _(độ khó 4/5)_
 - [ ] **[P1-82]** Tính toán tổng số phân bổ không vượt/thiếu số tiền dịch vụ của phòng; xử lý phần làm tròn VND nhất quán.  _(độ khó 5/5)_
 - [ ] **[P1-83]** Chỉ phương án được duyệt mới dùng để chốt khoản phải trả; lịch sử đề xuất và duyệt được tra cứu.  _(độ khó 4/5)_
@@ -468,7 +474,7 @@
 
 **Quy tắc/điều kiện tích hợp:** Báo cáo dịch vụ dùng kết quả phí đã khóa; không làm biến động nghĩa vụ thanh toán cũ.
 
-- [ ] **[P2-33]** Tùy chọn thông báo, tắt/mở từng loại và tổng hợp thông báo theo nhóm sự kiện.  _(độ khó 4/5)_
+- [ ] **[P2-33]** Preferences thông báo trong USERS.notification_preferences JSONB; backend kiểm tra dữ liệu cấu hình. Không tạo bảng preferences.  _(độ khó 4/5)_
 - [ ] **[P2-36]** Thống kê dịch vụ, giá trị tài sản, chi phí sửa chữa và khả năng thu hồi công nợ.  _(độ khó 4/5)_
 
 **Ước lượng task lớn:** 2 mã nguồn, 8 điểm.
@@ -479,7 +485,7 @@
 
 **Quy tắc/điều kiện tích hợp:** Phối hợp Student 6 xử lý vòng đời Thread và Student 1 về quyết định kiểm duyệt.
 
-- [ ] **[P3-10]** Người đăng nhận thông báo khi có bình luận/đề xuất; Owner/Manager nhận gợi ý Thread phù hợp phòng trống của mình.  _(độ khó 4/5)_
+- [ ] **[P3-10]** DEFERRED — Thông báo Comment/Suggestion và gợi ý Thread theo phòng trống.  _(độ khó 4/5)_
 - [ ] **[P3-11]** Cho phép tự đóng Thread theo thời hạn không hoạt động do hệ thống cấu hình.  _(độ khó 4/5)_
 - [ ] **[P3-16]** Thông báo kết quả kiểm duyệt cho người liên quan theo chính sách hệ thống.  _(độ khó 4/5)_
 
@@ -489,9 +495,9 @@
 
 **Quy tắc/điều kiện tích hợp:** Chỉ làm khi Phase 3 được triển khai; có mẫu thông báo, retry, trạng thái gửi lỗi.
 
-- [ ] **[P3-28]** Gửi email thông báo hóa đơn, thanh toán, lịch hẹn, hợp đồng và nhắc hạn theo cấu hình.  _(độ khó 4/5)_
-- [ ] **[P3-29]** Gửi SMS/OTP hoặc thông báo qua dịch vụ tích hợp bên thứ ba khi được triển khai.  _(độ khó 4/5)_
-- [ ] **[P3-30]** Quản lý mẫu thông báo, lựa chọn kênh, retry và trạng thái gửi thất bại.  _(độ khó 4/5)_
+- [ ] **[P3-28]** Email là dòng NOTIFICATIONS channel EMAIL, chống trùng recipient/event/type/channel; worker gửi/retry sau commit, không outbox riêng.  _(độ khó 4/5)_
+- [ ] **[P3-29]** SMS là dòng NOTIFICATIONS channel SMS; OTP chỉ hash trên USERS, dịch vụ gửi và danh tính người nhận kiểm tra tại backend.  _(độ khó 4/5)_
+- [ ] **[P3-30]** Template cố định trong source/config có version theo deployment; delivery_status/attempt_count/next_attempt_at trên NOTIFICATIONS. Không tạo bảng template/job.  _(độ khó 4/5)_
 
 **Ước lượng task lớn:** 3 mã nguồn, 12 điểm.
 
@@ -505,7 +511,7 @@
 
 # Phần 5: Student 5
 
-**Phạm vi BE:** Invoice – công nợ – Payment – đối soát VietQR.
+**Phạm vi BE:** Invoice – công nợ – Payment – QR thủ công/Sandbox.
 
 ## PHASE 1 — BACKEND BẮT BUỘC (P0) — 17 mã / 73 điểm
 
@@ -513,9 +519,9 @@
 
 **Quy tắc/điều kiện tích hợp:** Một kỳ không phát hành trùng hóa đơn; số tiền và đơn giá đã chốt không đổi theo cấu hình giá mới.
 
-- [ ] **[P1-85]** Owner/Manager lập Invoice theo hợp đồng và kỳ thu tiền; hỗ trợ một lần lập và kiểm soát trùng kỳ.  _(độ khó 4/5)_
-- [ ] **[P1-86]** Tạo Invoice Items: tiền thuê, điện, nước, dịch vụ tùy chọn, phụ thu/giảm trừ hợp lệ.  _(độ khó 2/5)_
-- [ ] **[P1-87]** Tính subtotal, điều chỉnh, tổng tiền, hạn thanh toán; kiểm tra tổng các khoản tiền khớp hóa đơn.  _(độ khó 4/5)_
+- [ ] **[P1-85]** Owner/Manager lập một Invoice riêng cho mỗi ContractTenant/tháng; unique khi chưa CANCELLED, hóa đơn thay thế phải có truy vết.  _(độ khó 4/5)_
+- [ ] **[P1-86]** InvoiceItems gồm các dòng phí/giảm trừ và sửa chữa được duyệt; PREPAID_APPLICATION là dòng áp dụng trả trước, không cộng vào tổng phí hay tiền thực nhận.  _(độ khó 2/5)_
+- [ ] **[P1-87]** Tổng tiền khớp dòng phí; due_date theo collection_day + grace_days snapshot, ngày vượt cuối tháng chặn về cuối tháng; tiền thuê tháng lẻ phải thỏa thuận.  _(độ khó 4/5)_
 - [ ] **[P1-88]** Ghi nhận đơn giá/số lượng/số tiền tại thời điểm phát hành để các hóa đơn cũ không bị đổi khi cập nhật giá.  _(độ khó 4/5)_
 - [ ] **[P1-89]** Cho phép xem hóa đơn của phòng có nhiều người thuê; chỉ người có quyền mới thấy chi tiết và nghĩa vụ của mình.  _(độ khó 2/5)_
 
@@ -525,32 +531,32 @@
 
 **Quy tắc/điều kiện tích hợp:** Phân biệt người thực trả và người được trừ nợ; hỗ trợ trả hộ/trả từng phần; đối chiếu tổng công nợ.
 
-- [ ] **[P1-90]** Quản lý phần phải đóng của từng thành viên: số phải trả, đã đóng, còn thiếu; cho phép chỉ người đại diện đóng hoặc từng người tự đóng.  _(độ khó 5/5)_
+- [ ] **[P1-90]** Theo dõi nghĩa vụ và công nợ riêng ContractTenant qua Invoice; đại diện không gộp công nợ thành viên.  _(độ khó 5/5)_
 - [ ] **[P1-91]** Cho phép một người thanh toán hộ thành viên khác nhưng phải phân biệt người chuyển tiền với người được ghi giảm công nợ.  _(độ khó 5/5)_
 - [ ] **[P1-92]** Hỗ trợ thanh toán TỪNG PHẦN, cộng dồn chính xác; không vượt công nợ nếu không có xử lý khoản dư được phê duyệt.  _(độ khó 5/5)_
-- [ ] **[P1-93]** Trạng thái hóa đơn: chưa thanh toán, thanh toán một phần, đã thanh toán, quá hạn, hủy/điều chỉnh hợp lệ.  _(độ khó 4/5)_
+- [ ] **[P1-93]** Tách document_status DRAFT/ISSUED/CANCELLED khỏi payment_status; quá hạn suy ra từ due_date và dư nợ. Owner/Manager phát hành; Owner duyệt điều chỉnh sau phát hành.  _(độ khó 4/5)_
 
 **Ước lượng task lớn:** 4 mã nguồn, 19 điểm.
 
 ### BE-05.3 — Tích hợp nhận giao dịch và xác thực webhook
 
-**Quy tắc/điều kiện tích hợp:** Đối soát VietQR thực tế Phase 1; chống webhook giả/lặp; chỉ ghi nhận đúng hóa đơn/booking.
+**Quy tắc/điều kiện tích hợp:** QR thủ công hoặc sandbox đã chọn; chống callback giả/lặp khi dùng sandbox; ghi nhận đúng Invoice/Booking.
 
-- [ ] **[P1-99]** Tích hợp nguồn xác nhận giao dịch thực tế (đơn vị đối soát/API/webhook ngân hàng tương thích) để nhận thông tin chuyển khoản.  _(độ khó 5/5)_
-- [ ] **[P1-100]** Xác thực nguồn webhook/thông báo giao dịch; không tin yêu cầu tự khai từ người thanh toán.  _(độ khó 5/5)_
-- [ ] **[P1-101]** Đối chiếu giao dịch theo mã tham chiếu, tài khoản nhận, số tiền và tình trạng nghiệp vụ để ghi nhận đúng Invoice/Booking.  _(độ khó 5/5)_
-- [ ] **[P1-102]** Chống webhook lặp, chống ghi nhận trùng giao dịch và xử lý trường hợp thông tin thiếu/sai/không khớp.  _(độ khó 5/5)_
+- [ ] **[P1-99]** Phase 1 chọn QR thủ công hoặc VNPay Sandbox hoặc MoMo Sandbox; không bắt buộc API ngân hàng thật hoặc triển khai cả hai sandbox.  _(độ khó 5/5)_
+- [ ] **[P1-100]** QR thủ công: Owner/Manager đúng Branch xác minh và lưu chứng cứ/audit. Sandbox: backend xác minh chữ ký callback; không tin trạng thái client tự khai.  _(độ khó 5/5)_
+- [ ] **[P1-101]** Đối chiếu tham chiếu, tài khoản nhà cung cấp, môi trường, tiền và trạng thái; Payment có tối đa một đích trực tiếp Invoice hoặc Booking, hoặc chưa khớp.  _(độ khó 5/5)_
+- [ ] **[P1-102]** Chống trùng provider transaction, request idempotency và webhook event; PaymentWebhookEvent lưu chứng cứ xử lý, không có BankTransaction.  _(độ khó 5/5)_
 
 **Ước lượng task lớn:** 4 mã nguồn, 20 điểm.
 
 ### BE-05.4 — Ghi Payment, cập nhật nợ và xử lý ngoại lệ
 
-**Quy tắc/điều kiện tích hợp:** Hỗ trợ nhiều lần chuyển khoản và nhiều người trả; xác nhận thủ công chỉ là ngoại lệ có audit.
+**Quy tắc/điều kiện tích hợp:** Hỗ trợ nhiều lần chuyển khoản và nhiều người trả; xác nhận thủ công là luồng hợp lệ của QR thủ công và luôn có audit.
 
 - [ ] **[P1-103]** Ghi nhận Payment thành công, thất bại, đang xử lý; cập nhật công nợ Invoice/điều kiện giữ chỗ Booking sau đối soát.  _(độ khó 5/5)_
 - [ ] **[P1-104]** Hỗ trợ một hóa đơn có nhiều lượt chuyển khoản hoặc nhiều người đóng; tổng số tiền đã thu phải được tính chính xác.  _(độ khó 5/5)_
 - [ ] **[P1-105]** Cung cấp lịch sử giao dịch, thời điểm nhận tiền và trạng thái đối soát cho người có quyền.  _(độ khó 4/5)_
-- [ ] **[P1-106]** Cho phép Owner/Manager rà soát giao dịch lỗi/không khớp; xác nhận thủ công chỉ là luồng ngoại lệ có quyền hạn và dấu vết, KHÔNG thay thế đối soát tự động P0.  _(độ khó 4/5)_
+- [ ] **[P1-106]** Owner/Manager rà soát giao dịch; xác nhận thủ công là luồng chính hợp lệ của QR thủ công. Tiền dư/chưa khớp nằm ở Payment; hoàn có phê duyệt/audit, không có ví Tenant.  _(độ khó 4/5)_
 
 **Ước lượng task lớn:** 4 mã nguồn, 18 điểm.
 
@@ -558,10 +564,10 @@
 
 ### BE-05.5 — Nhắc cọc và tất toán kỳ cuối
 
-**Quy tắc/điều kiện tích hợp:** Phối hợp Student 3: Booking/cọc hợp đồng; không tự khấu trừ khi chính sách chưa chốt.
+**Quy tắc/điều kiện tích hợp:** Phối hợp Student 3: Booking Hold/PREPAID_RENT; không tự khấu trừ khi chính sách chưa chốt.
 
 - [ ] **[P2-12]** Tự động nhắc thanh toán cọc, sắp hết hạn giữ chỗ và kiểm tra booking tồn đọng.  _(độ khó 4/5)_
-- [ ] **[P2-18]** Tính hóa đơn kỳ cuối, công nợ và tiền cọc phải trả/khấu trừ; ghi nhận việc hoàn cọc.  _(độ khó 5/5)_
+- [ ] **[P2-18]** Lập Invoice kỳ cuối và áp dụng PREPAID_RENT tháng cuối; rời sớm cần quyết định hoàn/giữ/phân bổ lại được duyệt, không tự suy diễn hoặc gọi là SECURITY_DEPOSIT.  _(độ khó 5/5)_
 
 **Ước lượng task lớn:** 2 mã nguồn, 9 điểm.
 
@@ -590,9 +596,9 @@
 
 **Quy tắc/điều kiện tích hợp:** Chỉ triển khai khi Phase 3 được duyệt; bảo vệ chữ ký callback và tính idempotent.
 
-- [ ] **[P3-24]** Tích hợp MoMo theo điều kiện dịch vụ và tài khoản nhận tiền hợp lệ của Owner.  _(độ khó 5/5)_
-- [ ] **[P3-25]** Tạo yêu cầu thanh toán, nhận callback/webhook, xác thực chữ ký và đối soát tự động MoMo.  _(độ khó 5/5)_
-- [ ] **[P3-26]** Hợp nhất lịch sử thanh toán VietQR/MoMo theo hóa đơn, booking, người nộp và trạng thái thực thu.  _(độ khó 5/5)_
+- [ ] **[P3-24]** Bổ sung MoMo Sandbox nếu chưa chọn ở Phase 1; giữ tính tùy chọn Phase 3, không bắt buộc tích hợp tiền thật.  _(độ khó 5/5)_
+- [ ] **[P3-25]** Mở rộng callback MoMo Sandbox với chữ ký, idempotency và retry; tái sử dụng Payments/PaymentWebhookEvents.  _(độ khó 5/5)_
+- [ ] **[P3-26]** Hợp nhất lịch sử QR thủ công/VNPay Sandbox/MoMo Sandbox, luôn tách REAL và SANDBOX theo Invoice/Booking/người nộp.  _(độ khó 5/5)_
 - [ ] **[P3-27]** Đối soát giao dịch thất bại/hủy/hoàn tiền và xử lý webhook lặp, đến trễ hoặc khác thứ tự.  _(độ khó 5/5)_
 
 **Ước lượng task lớn:** 4 mã nguồn, 20 điểm.
@@ -615,8 +621,8 @@
 
 **Quy tắc/điều kiện tích hợp:** Admin xử lý hồ sơ Owner; thông tin giấy tờ cá nhân phải giới hạn người truy cập.
 
-- [ ] **[P1-08]** Owner cung cấp thông tin xác minh danh tính; kiểm tra hồ sơ, xác nhận hoặc từ chối kích hoạt quyền Owner bởi quy trình kiểm duyệt phù hợp.  _(độ khó 4/5)_
-- [ ] **[P1-132]** Admin quản lý trạng thái tài khoản và xử lý việc xác minh Owner trong phạm vi quyền hệ thống.  _(độ khó 4/5)_
+- [ ] **[P1-08]** Thông tin xác minh Owner hiện hành nằm trên USERS, giấy tờ Cloudinary; chỉ ADMIN được phê duyệt/từ chối, audit theo whitelist không ghi secrets.  _(độ khó 4/5)_
+- [ ] **[P1-132]** ADMIN xử lý owner_verification_status và thông tin review trên USERS; audit chỉ field được phép, không audit toàn bộ bản ghi User.  _(độ khó 4/5)_
 
 **Ước lượng task lớn:** 2 mã nguồn, 8 điểm.
 
@@ -624,8 +630,8 @@
 
 **Quy tắc/điều kiện tích hợp:** Tenant xem dữ liệu đúng quan hệ thuê; tránh quá sức chứa/chồng lấn slot; phối hợp Student 3.
 
-- [ ] **[P1-31]** Owner/Manager tạo, cập nhật, xem và tìm kiếm thông tin Tenant: họ tên, ngày sinh, liên hệ, giấy tờ định danh, trạng thái.  _(độ khó 2/5)_
-- [ ] **[P1-32]** Tra cứu danh sách Tenant theo Branch, Room, hợp đồng và trạng thái còn ở/đã rời đi.  _(độ khó 2/5)_
+- [ ] **[P1-31]** Hồ sơ cá nhân hiện tại dùng USERS; CONTRACT_TENANTS.tenant_user_id lưu quan hệ thuê và tenant_snapshot lúc ký. Owner/Manager chỉ thấy dữ liệu trong phạm vi thuê, không tự sửa hồ sơ chung hoặc chiếm tài khoản.  _(độ khó 2/5)_
+- [ ] **[P1-32]** Tra cứu người thuê theo Branch/Room/Contract qua CONTRACT_TENANTS → USERS; một User được thuê nhiều Owner, giữ snapshot và lịch sử từng lần tham gia.  _(độ khó 2/5)_
 - [ ] **[P1-33]** Quản lý quan hệ Tenant tham gia Contract: người đại diện, thành viên, ngày vào/ra dự kiến, ngày ra thực tế.  _(độ khó 2/5)_
 - [ ] **[P1-34]** Ghi nhận việc bố trí Tenant vào Room Slot và lịch sử chiếm dụng chỗ ở.  _(độ khó 2/5)_
 - [ ] **[P1-35]** Kiểm tra không vượt quá sức chứa, không cho một slot bị chiếm dụng trùng thời gian trái quy tắc.  _(độ khó 4/5)_
@@ -679,7 +685,7 @@
 **Quy tắc/điều kiện tích hợp:** Đổi người đại diện/thành viên có duyệt; bàn giao và đối chiếu CSVC cuối kỳ.
 
 - [ ] **[P2-08]** Quản lý thay đổi người đại diện hoặc thành viên cùng thuê theo quy trình xét duyệt.  _(độ khó 4/5)_
-- [ ] **[P2-19]** Ghi nhận biên bản bàn giao/thu hồi CSVC và đối chiếu hư hỏng khi Tenant chuyển đi.  _(độ khó 4/5)_
+- [ ] **[P2-19]** Bàn giao/thu hồi CSVC dùng handover_snapshot/evidence trên CONTRACT_TENANTS, lịch sử trạng thái qua audit; không bảng bàn giao riêng.  _(độ khó 4/5)_
 
 **Ước lượng task lớn:** 2 mã nguồn, 8 điểm.
 
@@ -712,7 +718,7 @@
 - [ ] **[P3-01]** Người dùng đã đăng nhập tạo, xem, chỉnh sửa, đóng và tra cứu Thread tìm trọ của mình.  _(độ khó 4/5)_
 - [ ] **[P3-02]** Thread có tiêu đề, mô tả và tiêu chí: khu vực, mức giá, diện tích, sức chứa, tiện ích, thời gian dự kiến chuyển vào (nếu áp dụng).  _(độ khó 4/5)_
 - [ ] **[P3-03]** Chỉ người đã đăng nhập được XEM hoặc tương tác Thread; Guest không được xem Thread.  _(độ khó 1/5)_
-- [ ] **[P3-04]** Người dùng đã đăng nhập bình luận vào Thread; quản lý sửa/ẩn bình luận theo quyền.  _(độ khó 4/5)_
+- [ ] **[P3-04]** DEFERRED — Comment Thread hoãn đến vòng mở rộng; không bảng hoặc JSONB giả lập comment.  _(độ khó 4/5)_
 - [ ] **[P3-14]** Tự động đóng Thread theo quy tắc hết hạn, vi phạm hoặc yêu cầu chủ Thread.  _(độ khó 4/5)_
 
 **Ước lượng task lớn:** 5 mã nguồn, 17 điểm.
@@ -730,41 +736,41 @@
 - [ ] Tất cả mã `[P1-01]` đến `[P1-138]` có owner, tests và được tích hợp vào luồng chạy thử.
 - [ ] Phase 2 và Phase 3 không âm thầm được đưa vào phạm vi bắt buộc; nhóm phê duyệt trước khi bắt đầu.
 - [ ] Phân quyền ở mọi API dựa cả role và quyền thực tế trên Branch/hợp đồng; không có truy cập chéo Tenant/Owner.
-- [ ] Luồng mẫu: tìm phòng → đặt lịch (có thể bỏ qua) → booking → thanh toán cọc thực → xác nhận giữ chỗ → hợp đồng → cư trú → dịch vụ → hóa đơn → thanh toán từng phần → lịch sử chi phí và sửa chữa.
-- [ ] Đối soát VietQR chỉ dùng dữ liệu giao dịch đã xác thực; test webhook giả, webhook lặp, giao dịch sai nội dung và tranh chấp slot.
+- [ ] Luồng mẫu: tìm phòng → đặt lịch (có thể bỏ qua) → booking → xác minh Booking Hold đúng môi trường → xác nhận giữ chỗ → hợp đồng → cư trú → dịch vụ → hóa đơn → thanh toán từng phần → lịch sử chi phí và sửa chữa.
+- [ ] QR thủ công/Sandbox chỉ dùng Payment đã xác minh; test webhook giả, webhook lặp, giao dịch sai nội dung và tranh chấp slot.
 - [ ] Hóa đơn đã phát hành và khoản tiền thực thu không tự thay đổi khi đổi đơn giá hay người quản lý Branch.
 - [ ] PostgreSQL, môi trường demo, OpenAPI/tài liệu API và dữ liệu mẫu có thể chạy cho giảng viên kiểm tra.
 
 ## 8. Phụ lục: Danh sách business rules chung phải giữ
 
 - [BR-01] KHÔNG sử dụng Brand. OWNER quản lý trực tiếp các Branch, Manager của mình.
-- [BR-02] Mỗi Branch đang vận hành có đúng 01 Manager phụ trách tại một thời điểm; 01 Manager có thể quản lý nhiều Branch.
+- [BR-02] Branch ACTIVE có một Manager; Manager chỉ thuộc một Owner tại một thời điểm, có thể phụ trách nhiều Branch của Owner đó. Branch DRAFT được chưa có Manager.
 - [BR-03] Phân quyền dựa cả vào vai trò VÀ quan hệ quản lý/thuê thực tế; không dựa duy nhất vào tên role.
 - [BR-04] Guest được tìm/xem phòng công khai; đặt lịch, booking, Thread (Phase 3) cần đăng nhập.
 - [BR-05] Không có chức năng tạo bài đăng nhà trọ riêng; danh sách tìm phòng lấy từ dữ liệu quản lý phòng/cơ sở.
 - [BR-06] Hỗ trợ cả thuê nguyên phòng và thuê từng chỗ; không cho thuê/giữ trùng tài nguyên ở cùng thời điểm.
 - [BR-07] Đặt lịch xem và booking là hai nghiệp vụ độc lập; có thể đặt phòng mà không cần xem trước.
-- [BR-08] Booking chỉ trở thành giữ chỗ thành công sau khi xác nhận thực nhận đủ khoản cọc theo chính sách.
+- [BR-08] Booking CONFIRMED chỉ sau khi Payment đã xác minh đủ Booking Hold đúng môi trường; tiền đến muộn không tự hồi sinh Booking.
 - [BR-09] Điện/nước luôn sẵn như dịch vụ mặc định; không tiêu thụ thì không tính tiền theo lượng dùng.
 - [BR-10] Tenant được yêu cầu đăng ký/hủy dịch vụ TÙY CHỌN, không được hủy dịch vụ điện/nước mặc định.
-- [BR-11] Chi phí điện/nước mặc định chia đều theo người có nghĩa vụ; thay đổi tỷ lệ cần Tenant đề xuất và Manager/Owner duyệt.
+- [BR-11] Điện/nước mặc định theo ngày cư trú thực tế, tổng tiền đúng phí gốc sau làm tròn; thay đổi cần đề xuất và Owner/Manager duyệt.
 - [BR-12] Giá dịch vụ thay đổi không sửa số tiền hóa đơn đã phát hành.
 - [BR-13] Hóa đơn có thể thanh toán từng phần; thành viên tự trả hoặc đại diện trả thay và phải theo dõi chính xác công nợ từng người.
-- [BR-14] Phase 1 bắt buộc đối soát chuyển khoản VietQR THỰC TẾ; giao dịch chưa xác nhận không tự đánh dấu đã trả.
-- [BR-15] Tài khoản nhận tiền thuộc Owner; có thể cấu hình khác nhau cho từng Branch.
+- [BR-14] Phase 1: QR thủ công HOẶC VNPay/MoMo Sandbox; không bắt buộc đối soát ngân hàng thật. Payment chưa xác minh không giảm công nợ.
+- [BR-15] Ảnh QR nằm trên Branch; không có owner_bank_accounts. Sandbox tách tiền thật; không tạo ví Tenant.
 - [BR-16] Tenant được báo hỏng Furniture/Service; mỗi yêu cầu có lịch sử nhiều lần xử lý và ảnh minh chứng.
 - [BR-17] CSVC hao mòn/cũ do Owner chịu; lỗi Tenant gây ra chỉ tính vào hóa đơn khi Manager/Owner duyệt.
 - [BR-18] Phase 1 hợp đồng CRUD/quản lý trạng thái; Phase 3 mới làm ký OTP mô phỏng và PDF hợp đồng.
 - [BR-19] Thread chỉ có ở Phase 3; người chưa đăng nhập không được xem, gợi ý phòng có thể khớp gần đúng.
-- [BR-20] ADMIN có chức năng xử lý báo cáo vi phạm/ẩn/đóng Thread khi làm Phase 3.
+- [BR-20] Phase 3 ADMIN chỉ ẩn/đóng Thread cơ bản; quy trình báo cáo vi phạm, Comment và Room Suggestion DEFERRED, không giả lập bằng JSONB.
 
 ## 9. Các quyết định chưa chốt trong nguồn (không suy diễn)
 
-- Một người có thể mang nhiều role đồng thời hay chỉ chọn một vai trò tại một thời điểm; không được mặc định quyết định này đã được chốt.
+- Đã chốt D03: một User có nhiều role đồng thời; không hỏi lại.
 - Thời hạn thanh toán tiền cọc, thời hạn giữ phòng, mức cọc, điều kiện hủy/hoàn/khấu trừ.
-- Cách tính số người ở thực tế trong kỳ khi chia điện/nước (ví dụ Tenant vào/ra giữa kỳ).
-- Ai được chốt/phát hành hóa đơn; điều kiện sửa, hủy hoặc điều chỉnh hóa đơn đã phát hành.
-- Quy tắc tiền chuyển thừa/thiếu, đóng hộ, khoản chưa khớp và thời hạn xử lý ngoại lệ đối soát.
+- Đã chốt D22: số ngày cư trú giao với kỳ/segment và làm tròn VND xác định.
+- Đã chốt D26: Owner/Manager phát hành; Owner duyệt điều chỉnh sau phát hành, bảo toàn snapshot và audit.
+- Đã chốt D25/D29: phân biệt payer/người hưởng; tiền dư/chưa khớp nằm tại Payment. Thời hạn xử lý ngoại lệ cụ thể còn cấu hình.
 - Phạm vi phân quyền xác minh Owner và mức độ xác thực yêu cầu trước khi mở quyền vận hành.
 - Giới hạn đăng Thread, thời hạn tự đóng, quy tắc kiểm duyệt khi triển khai Phase 3.
 

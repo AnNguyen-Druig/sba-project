@@ -1,61 +1,58 @@
 spring:
   application:
     name: sba-project
-  config:
-    # Run from be-sba-project; keep this optional file outside src/main/resources.
-    import: optional:file:./application-local.yml
-
-  security:
-    user:
-      name: admin
-      password: 123456
   datasource:
-    # Supabase Session Pooler (5432); include sslmode=require in DB_URL.
-    url: ${DB_URL:jdbc:postgresql://aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres?sslmode=require}
-    username: ${DB_USERNAME:postgres.fmzupdyoxtlkxrfdtuly}
-    password: ${DB_PASSWORD:HtD22012005*#@}
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: "HtD22012005*#@"
     driver-class-name: org.postgresql.Driver
-    hikari:
-      # Each running backend has its own pool; budget for all team members.
-      maximum-pool-size: ${DB_POOL_MAX_SIZE:5}
-      minimum-idle: ${DB_POOL_MIN_IDLE:1}
-      connection-timeout: 30000
-      idle-timeout: 600000
-      max-lifetime: 1800000
-
+  mail:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:587}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${SMTP_AUTH:true}
+          starttls:
+            enable: ${SMTP_STARTTLS:true}
   jpa:
     open-in-view: false
     show-sql: false
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
     hibernate:
-      # Shared database: check mappings without creating/altering/dropping tables.
-      ddl-auto: update
+      ddl-auto: validate
     properties:
       hibernate:
-        default_schema: public
+        default_schema: rental
+        type:
+          json_format_mapper: org.hibernate.type.format.jackson.Jackson3JsonFormatMapper
         jdbc:
           time_zone: UTC
+        temp:
+          use_jdbc_metadata_defaults: false
   sql:
     init:
       mode: never
-
-  servlet:
-    encoding:
-      charset: UTF-8
-      enabled: true
-      force: true
-
-  web:
-    error:
-      include-message: never
-      include-binding-errors: never
-      include-stacktrace: never
-      include-exception: false
-
+  flyway:
+    enabled: false
 server:
-  port: ${PORT:8080}
-  # Controllers already declare /api/v1; do not duplicate it as context-path.
-
+  port: ${SERVER_PORT:8080}
+app:
+  frontend-url: ${FRONTEND_BASE_URL:http://localhost:3000}
+  mail:
+    from: ${SMTP_FROM:no-reply@example.com}
+    verification-expiration-ms: ${EMAIL_VERIFICATION_EXPIRATION_MS:86400000}
+  jwt:
+    expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:3600000}
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
+    refresh-cookie-secure: ${REFRESH_COOKIE_SECURE:true}
+    refresh-cookie-same-site: ${REFRESH_COOKIE_SAME_SITE:Strict}
+    cleanup-initial-delay-ms: ${JWT_TOKEN_CLEANUP_INITIAL_DELAY_MS:3600000}
+    cleanup-interval-ms: ${JWT_TOKEN_CLEANUP_INTERVAL_MS:3600000}
 logging:
   level:
     root: INFO
-    com.sba.project: ${APP_LOG_LEVEL:INFO}
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: 'OFF'

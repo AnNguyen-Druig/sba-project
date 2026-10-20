@@ -1,9 +1,12 @@
 package com.sba.project;
+
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-@SpringBootApplication
-public class SbaProjectApplication {
+import org.springframework.scheduling.annotation.EnableAsync;
 
+@SpringBootApplication
+@EnableAsync
+public class SbaProjectApplication {
     public static void main(String[] args) {
         SpringApplication.run(SbaProjectApplication.class, args);
     }

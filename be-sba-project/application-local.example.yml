@@ -3,9 +3,16 @@
 DB_URL: "jdbc:postgresql://aws-0-ap-northeast-2.pooler.supabase.com:5432/postgres?sslmode=require"
 DB_USERNAME: "postgres.fmzupdyoxtlkxrfdtuly"
 DB_PASSWORD: 'REPLACE_WITH_YOUR_DATABASE_PASSWORD'
+JWT_SECRET: 'REPLACE_WITH_A_RANDOM_SECRET_AT_LEAST_32_BYTES'
 
 # Optional overrides:
 # PORT: 8080
 # DB_POOL_MAX_SIZE: 5
 # DB_POOL_MIN_IDLE: 1
 # APP_LOG_LEVEL: INFO
+# SMTP_HOST: smtp.gmail.com
+# SMTP_PORT: 587
+# SMTP_USERNAME: your-sender@example.com
+# SMTP_PASSWORD: your-app-password
+# SMTP_FROM: your-sender@example.com
+# FRONTEND_BASE_URL: http://localhost:3000
