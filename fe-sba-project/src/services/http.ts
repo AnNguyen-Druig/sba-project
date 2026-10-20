@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { useSession } from '@/features/auth/session-store'
 import { endpoint, provider, type Feature } from './config'
 import { sessionSchema, type Session } from '@/interfaces/domain'
+import { realApiIssue } from './real-api'
 
 export class ApiError extends Error {
   status: number
@@ -44,6 +45,10 @@ export async function request<T>(
   init: RequestInit = {},
   retry = true,
 ): Promise<T> {
+  if (provider(feature) === 'real') {
+    const issue = realApiIssue(feature, path, init.method || 'GET')
+    if (issue) throw new ApiError(issue, 501)
+  }
   const { accessToken: token, user } = useSession.getState()
   const scenario =
     provider(feature) === 'mock' && feature !== 'auth' && feature !== 'recovery'

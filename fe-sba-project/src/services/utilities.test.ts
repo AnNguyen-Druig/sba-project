@@ -2,6 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import { utilitiesService } from './utilities'
 import { managerApi } from './manager'
 
+// These are serialization tests for pending adapters. Their production availability is
+// tested independently in real-api.test.ts; this does not enable any application route.
+vi.mock('./real-api', () => ({ realApiIssue: () => null }))
+
 afterEach(() => {
   vi.unstubAllEnvs()
   vi.unstubAllGlobals()

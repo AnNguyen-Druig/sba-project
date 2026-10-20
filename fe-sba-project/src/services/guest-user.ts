@@ -132,7 +132,7 @@ function query(filters: RoomFilters) {
   } else {
     if (filters.mode !== 'ALL' || filters.availableOnly || filters.area)
       throw new ApiError(
-        'API phòng hiện chưa hỗ trợ bộ lọc này. Chọn catalog provider mock để tìm theo hình thức thuê hoặc khả dụng.',
+        'Bộ lọc này chưa khả dụng. Vui lòng tìm theo địa chỉ, giá hoặc sức chứa.',
         422,
       )
     const sorts: Record<string, string> = {

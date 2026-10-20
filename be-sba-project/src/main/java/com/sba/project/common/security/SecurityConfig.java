@@ -73,6 +73,9 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/v1/public/rooms",
+                                "/api/v1/public/rooms/{id}").permitAll()
                         .requestMatchers(
                                 "/api/auth/register",
                                 "/api/auth/login",

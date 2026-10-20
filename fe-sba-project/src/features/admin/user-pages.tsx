@@ -97,7 +97,8 @@ function StatusAction({ target }: { target: AdminUser }) {
         adminApi.status(target.id, value.active, target.version, value.reason),
       () => setOpen(false),
     )
-  const canAct = (target.status === 'ACTIVE' && !self) || (active && target.canActivate === true)
+  const canAct = (target.status === 'ACTIVE' && !self) ||
+    (active && (target.canActivate === true || provider('adminUsers') === 'real'))
   return (
     <>
       <div className="mt-5 flex flex-wrap gap-3">
@@ -117,7 +118,7 @@ function StatusAction({ target }: { target: AdminUser }) {
           Không tự vô hiệu hóa tài khoản quản trị đang sử dụng.
         </p>
       )}
-      {active && target.canActivate === undefined && (
+      {active && target.canActivate === undefined && provider('adminUsers') === 'mock' && (
         <p className="mt-3 text-xs text-muted-foreground">
           Cần API xác nhận điều kiện đăng nhập và xác minh trước khi mở kích hoạt lại.
         </p>

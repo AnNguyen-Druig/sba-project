@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button'
 import { RoomCard, RoomCardSkeleton } from '@/features/rooms/components/room-card'
 import { useFeaturedRooms } from '@/features/rooms/hooks/use-featured-rooms'
 import { routes } from '@/lib/routes'
+import { provider } from '@/services/config'
 
 export function FeaturedRooms() {
   const { status, rooms, retry } = useFeaturedRooms()
@@ -17,7 +18,7 @@ export function FeaturedRooms() {
       <Container>
         <div className="mb-8 flex items-center justify-between gap-4">
           <h2 id="featured-title" className="text-xl font-bold">
-            Phòng đang cho thuê
+            {provider('catalog') === 'real' ? 'Khám phá các phòng' : 'Phòng đang cho thuê'}
           </h2>
           <Button asChild variant="link" className="px-0">
             <Link to={routes.rooms}>Xem tất cả</Link>

@@ -231,8 +231,8 @@ export default function RoomSearchPage() {
       {provider('catalog') === 'real' && (
         <div className="mb-6">
           <Notice>
-            API phòng hiện hỗ trợ địa chỉ, giá, sức chứa và sắp xếp; hình thức thuê, khu vực chuẩn
-            hóa và lịch trống cần API bổ sung.
+            Bạn có thể tìm theo địa chỉ, giá, sức chứa và sắp xếp kết quả. Lọc theo hình thức thuê,
+            khu vực và lịch trống hiện chưa khả dụng.
           </Notice>
         </div>
       )}

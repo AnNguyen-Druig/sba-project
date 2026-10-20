@@ -33,12 +33,11 @@ describe('Owner API provider contracts', () => {
     vi.stubGlobal('fetch', fetch)
     const { ownerApi } = await import('./owner')
     await expect(ownerApi.mutate('/branches', { code: 'TEST' })).rejects.toMatchObject({
-      status: 404,
+      status: 501,
     })
-    expect(fetch).toHaveBeenCalledTimes(1)
-    expect(fetch.mock.calls[0][0]).toBe('https://api.example.test/api/owner/branches')
+    expect(fetch).not.toHaveBeenCalled()
   })
-  it('rejects malformed financial response instead of rendering invented totals', async () => {
+  it('keeps financial reports unavailable until their real contract exists', async () => {
     vi.stubEnv('VITE_API_MODE', 'real')
     vi.resetModules()
     vi.stubGlobal(
@@ -52,6 +51,6 @@ describe('Owner API provider contracts', () => {
         ),
     )
     const { ownerApi } = await import('./owner')
-    await expect(ownerApi.summary({ month: '2026-10' })).rejects.toMatchObject({ status: 502 })
+    await expect(ownerApi.summary({ month: '2026-10' })).rejects.toMatchObject({ status: 501 })
   })
 })
