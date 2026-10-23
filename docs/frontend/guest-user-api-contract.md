@@ -1,6 +1,6 @@
 # TroPro Guest + Auth + User API contract
 
-Implementation branch: `feature/fe-rebuild`. Backend source is unchanged. Current Java controllers/DTOs are authoritative; proposed endpoints below are frontend contracts, not a claim that BE implements them.
+Implementation branch: `feature/fe-rebuild`. Current Java controllers/DTOs are authoritative; proposed endpoints below are frontend contracts, not a claim that BE implements them.
 
 ## Configuration and transport
 
@@ -9,7 +9,7 @@ Implementation branch: `feature/fe-rebuild`. Backend source is unchanged. Curren
 - `VITE_API_MODE=real`: all features send real requests, including proposed endpoints; unsupported endpoints show errors.
 - Feature overrides: `VITE_AUTH_PROVIDER`, `VITE_CATALOG_PROVIDER`, `VITE_LEASING_PROVIDER`, `VITE_PROFILE_PROVIDER`, `VITE_NOTIFICATIONS_PROVIDER`, `VITE_RECOVERY_PROVIDER`, each `real|mock`.
 - `VITE_API_BASE_URL` is empty by default. Vite proxies `/api` to `VITE_BACKEND_PROXY_TARGET` (default `http://localhost:8080`). Production needs a same-origin reverse proxy, or an explicitly configured API URL plus credentialed CORS and appropriate cookie attributes.
-- For live verification email links, set BE environment `FRONTEND_BASE_URL=http://localhost:5173` (current BE defaults to port 3000). This is an environment setup requirement; no BE source was modified.
+- BE verification links default to `http://localhost:5173`; set `FRONTEND_BASE_URL` only when the frontend runs at a different address.
 - BE defaults to secure refresh cookies. For local **HTTP** development only, set `REFRESH_COOKIE_SECURE=false`; keep it true with HTTPS in production. With a cross-origin API URL, configure Spring `app.cors.allowed-origins` (environment `APP_CORS_ALLOWED_ORIGINS`) to the exact FE origin and keep credentials enabled.
 - Provider selection happens before sending a request. Real errors (including 401/403/404/409/500) never trigger mock fallback. A protected 401 can trigger one shared refresh request and one retry.
 - All requests use `credentials: include`; access token is held only in the Zustand memory store. Refresh comes from BE's HttpOnly `refresh_token` cookie, path `/api/auth`. No real token or password is stored in browser persistence.
