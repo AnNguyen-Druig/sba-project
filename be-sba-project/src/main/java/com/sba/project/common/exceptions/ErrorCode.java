@@ -61,6 +61,11 @@ public enum ErrorCode {
     CONTRACT_TENANT_NOT_FOUND(1304, "Contract member not found", HttpStatus.NOT_FOUND),
     INVALID_RENTAL_PERIOD(1305, "Rental period is invalid", HttpStatus.BAD_REQUEST),
     LEASING_STATE_CONFLICT(1306, "Current leasing state does not allow this operation", HttpStatus.CONFLICT),
+    CONTRACT_REPRESENTATIVE_INVALID(1307, "A contract must have exactly one representative", HttpStatus.CONFLICT),
+    CONTRACT_NOT_EDITABLE(1308, "Contract can no longer be edited in its current state", HttpStatus.CONFLICT),
+    BOOKING_HOLD_FUNDS_INSUFFICIENT(1309, "Verified hold deposit is not sufficient", HttpStatus.CONFLICT),
+    ZALO_URL_INVALID(1310, "Zalo group link is invalid", HttpStatus.BAD_REQUEST),
+    ZALO_LINK_UNAVAILABLE(1311, "Zalo group link is not available for this user", HttpStatus.FORBIDDEN),
 
     // 1400-1499: utilities.
     SERVICE_NOT_FOUND(1400, "Rental service not found", HttpStatus.NOT_FOUND),

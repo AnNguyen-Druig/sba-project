@@ -18,4 +18,10 @@ public class AuditActorContext {
         entityManager.createNativeQuery("select set_config('rental.actor_id', :actor, true)")
                 .setParameter("actor", actorId.toString()).getSingleResult();
     }
+
+    /** Reason recorded by audit_change() for every audited write in the current transaction. */
+    public void bindReason(String reason) {
+        entityManager.createNativeQuery("select set_config('rental.reason', :reason, true)")
+                .setParameter("reason", reason == null ? "" : reason).getSingleResult();
+    }
 }
