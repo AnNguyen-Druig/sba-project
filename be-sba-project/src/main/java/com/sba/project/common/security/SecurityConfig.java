@@ -31,7 +31,7 @@ public class SecurityConfig {
 
     @Bean
     CorsConfigurationSource corsConfigurationSource(
-            @Value("${app.cors.allowed-origins:http://localhost:5173,http://localhost:3000}") String configuredOrigins) {
+            @Value("${app.cors.allowed-origins:}") String configuredOrigins) {
         List<String> allowedOrigins = Arrays.stream(configuredOrigins.split(","))
                 .map(String::trim)
                 .filter(origin -> !origin.isEmpty())
@@ -73,9 +73,6 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler))
                 .authorizeHttpRequests(authorize -> authorize
                         .requestMatchers(HttpMethod.OPTIONS, "/api/**").permitAll()
-                        .requestMatchers(HttpMethod.GET,
-                                "/api/v1/public/rooms",
-                                "/api/v1/public/rooms/{id}").permitAll()
                         .requestMatchers(
                                 "/api/auth/register",
                                 "/api/auth/login",
