@@ -6,7 +6,9 @@ import com.sba.project.modules.leasing.dto.request.BookingDecisionRequest;
 import com.sba.project.modules.leasing.dto.request.BookingSearchRequest;
 import com.sba.project.modules.leasing.dto.response.BookingPaymentInstructionResponse;
 import com.sba.project.modules.leasing.dto.response.BookingResponse;
+import com.sba.project.modules.leasing.dto.response.StatusHistoryResponse;
 import com.sba.project.modules.leasing.enums.BookingStatus;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.data.domain.Pageable;
@@ -27,6 +29,15 @@ public interface BookingService {
 
     /** P1-51: Owner/Manager rejects a live hold; the hold deposit is fully refundable. */
     BookingResponse reject(UUID bookingId, BookingDecisionRequest request);
+
+    /**
+     * P1-56: requester or Owner/Manager cancels a live hold with a reason; the response carries the
+     * hold-deposit refund decision (the refund itself is done by the payment module).
+     */
+    BookingResponse cancel(UUID bookingId, BookingDecisionRequest request);
+
+    /** P1-58: status transitions recorded by the database audit trigger, oldest first. */
+    List<StatusHistoryResponse> getHistory(UUID bookingId);
 
     /** P1-52: payment instruction and reference for the requester while the Booking awaits payment. */
     BookingPaymentInstructionResponse getPaymentInstruction(UUID bookingId);

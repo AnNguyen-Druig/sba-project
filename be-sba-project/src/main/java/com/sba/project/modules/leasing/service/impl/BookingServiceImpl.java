@@ -9,6 +9,7 @@ import com.sba.project.modules.leasing.dto.request.BookingDecisionRequest;
 import com.sba.project.modules.leasing.dto.request.BookingSearchRequest;
 import com.sba.project.modules.leasing.dto.response.BookingPaymentInstructionResponse;
 import com.sba.project.modules.leasing.dto.response.BookingResponse;
+import com.sba.project.modules.leasing.dto.response.StatusHistoryResponse;
 import com.sba.project.modules.leasing.entity.Appointment;
 import com.sba.project.modules.leasing.entity.Booking;
 import com.sba.project.modules.leasing.entity.ResourceAllocation;
@@ -64,6 +65,7 @@ public class BookingServiceImpl implements BookingService {
     private static final String REFERENCE_PREFIX = "BK";
     private static final int REFERENCE_HEX_LENGTH = 12;
     private static final int EXPIRY_BATCH = 200;
+    private static final String BOOKINGS_TABLE = "bookings";
     private static final DateTimeFormatter DEADLINE_FORMAT =
             DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy").withZone(LeasingDates.ZONE);
 
@@ -74,6 +76,7 @@ public class BookingServiceImpl implements BookingService {
     private final ResourceAvailabilityGuard availabilityGuard;
     private final BookingHoldLifecycle holdLifecycle;
     private final BookingFundsPort fundsPort;
+    private final StatusHistoryReader historyReader;
     private final BookingMapper bookingMapper;
     private final TenantAccessPolicy accessPolicy;
     private final AuditActorContext auditContext;
@@ -84,7 +87,8 @@ public class BookingServiceImpl implements BookingService {
     BookingServiceImpl(BookingRepository bookingRepository, ResourceAllocationRepository allocationRepository,
             AppointmentRepository appointmentRepository, PropertyQueryService propertyQueryService,
             ResourceAvailabilityGuard availabilityGuard, BookingHoldLifecycle holdLifecycle,
-            BookingFundsPort fundsPort, BookingMapper bookingMapper, TenantAccessPolicy accessPolicy,
+            BookingFundsPort fundsPort, StatusHistoryReader historyReader, BookingMapper bookingMapper,
+            TenantAccessPolicy accessPolicy,
             AuditActorContext auditContext, TransactionTemplate transactionTemplate, Clock clock,
             // REAL vs SANDBOX money is a server setting; never chosen by the client.
             @Value("${app.leasing.payment-environment:SANDBOX}") PaymentEnvironment paymentEnvironment) {
@@ -95,6 +99,7 @@ public class BookingServiceImpl implements BookingService {
         this.availabilityGuard = availabilityGuard;
         this.holdLifecycle = holdLifecycle;
         this.fundsPort = fundsPort;
+        this.historyReader = historyReader;
         this.bookingMapper = bookingMapper;
         this.transactionTemplate = transactionTemplate;
         this.accessPolicy = accessPolicy;
@@ -194,6 +199,36 @@ public class BookingServiceImpl implements BookingService {
         HoldRefundOutcome outcome = holdLifecycle.release(booking, BookingStatus.REJECTED,
                 HoldReleaseCause.LANDLORD_REJECT, request.reason().trim());
         return bookingMapper.toResponse(booking, outcome);
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse cancel(UUID bookingId, BookingDecisionRequest request) {
+        UUID actorId = accessPolicy.currentUserId();
+        Booking booking = bookingRepository.findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+        boolean byRequester = actorId.equals(booking.getRequesterUserId());
+        if (!byRequester) requireBranchScope(actorId, booking.getBranchId());
+        if (!BookingHoldLifecycle.LIVE_HOLD.contains(booking.getStatus())) {
+            throw new AppException(ErrorCode.LEASING_STATE_CONFLICT);
+        }
+        auditContext.bind(actorId);
+        // The customer follows the 24h rule; Owner/Manager cancelling means the landlord cannot hand
+        // the room over, which is fully refundable (BR Câu 9 mục B).
+        HoldReleaseCause cause = byRequester ? HoldReleaseCause.CUSTOMER_CANCEL : HoldReleaseCause.LANDLORD_REJECT;
+        HoldRefundOutcome outcome = holdLifecycle.release(booking, BookingStatus.CANCELLED, cause,
+                request.reason().trim());
+        return bookingMapper.toResponse(booking, outcome);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<StatusHistoryResponse> getHistory(UUID bookingId) {
+        UUID actorId = accessPolicy.currentUserId();
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+        if (!actorId.equals(booking.getRequesterUserId())) requireBranchScope(actorId, booking.getBranchId());
+        return historyReader.read(BOOKINGS_TABLE, bookingId);
     }
 
     @Override

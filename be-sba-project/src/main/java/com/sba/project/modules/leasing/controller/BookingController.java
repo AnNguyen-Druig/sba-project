@@ -2,17 +2,22 @@ package com.sba.project.modules.leasing.controller;
 
 import com.sba.project.common.base.ApiResponse;
 import com.sba.project.common.base.PagedResponse;
+import com.sba.project.modules.leasing.dto.request.BookingConversionRequest;
 import com.sba.project.modules.leasing.dto.request.BookingCreateRequest;
 import com.sba.project.modules.leasing.dto.request.BookingDecisionRequest;
 import com.sba.project.modules.leasing.dto.request.BookingSearchRequest;
 import com.sba.project.modules.leasing.dto.response.BookingPaymentInstructionResponse;
 import com.sba.project.modules.leasing.dto.response.BookingResponse;
+import com.sba.project.modules.leasing.dto.response.ContractResponse;
+import com.sba.project.modules.leasing.dto.response.StatusHistoryResponse;
 import com.sba.project.modules.leasing.enums.BookingStatus;
 import com.sba.project.modules.leasing.service.BookingService;
+import com.sba.project.modules.leasing.service.ContractService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
@@ -34,6 +39,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Validated
 public class BookingController {
     private final BookingService bookingService;
+    private final ContractService contractService;
 
     /** P1-49/P1-50: hold a Room/Slot; response carries the hold amount and payment deadline. */
     @PostMapping
@@ -80,6 +86,29 @@ public class BookingController {
     public ResponseEntity<ApiResponse<BookingPaymentInstructionResponse>> paymentInstruction(
             @PathVariable UUID bookingId) {
         return ResponseEntity.ok(ApiResponse.success(bookingService.getPaymentInstruction(bookingId)));
+    }
+
+    /** P1-56: requester or Owner/Manager cancels; the response carries the hold-deposit refund decision. */
+    @PostMapping("/{bookingId}/cancel")
+    public ResponseEntity<ApiResponse<BookingResponse>> cancel(@PathVariable UUID bookingId,
+            @Valid @RequestBody BookingDecisionRequest request) {
+        return ResponseEntity.ok(ApiResponse.success(bookingService.cancel(bookingId, request)));
+    }
+
+    /** P1-58: status timeline, oldest first. */
+    @GetMapping("/{bookingId}/history")
+    public ResponseEntity<ApiResponse<List<StatusHistoryResponse>>> history(@PathVariable UUID bookingId) {
+        return ResponseEntity.ok(ApiResponse.success(bookingService.getHistory(bookingId)));
+    }
+
+    /** P1-57: Owner/Manager starts a draft Contract from a confirmed Booking (idempotent). */
+    @PostMapping("/{bookingId}/convert")
+    public ResponseEntity<ApiResponse<ContractResponse>> convert(@PathVariable UUID bookingId,
+            @Valid @RequestBody BookingConversionRequest request) {
+        ApiResponse<ContractResponse> body = ApiResponse.success(contractService.createDraftFromBooking(bookingId,
+                request));
+        body.setStatus(HttpStatus.CREATED.value());
+        return ResponseEntity.status(HttpStatus.CREATED).body(body);
     }
 
     /** P1-51: there is no "approve" command — availability is checked automatically (BR-P09). */

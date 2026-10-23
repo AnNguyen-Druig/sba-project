@@ -28,6 +28,23 @@ public interface ContractTenantRepository extends JpaRepository<ContractTenant, 
     @Query("select count(ct) > 0 " + ACTIVE_TENANCY + " and ct.tenantUserId = :userId and c.branchId = :branchId")
     boolean existsActiveTenancyInBranch(@Param("userId") UUID userId, @Param("branchId") UUID branchId);
 
+    List<ContractTenant> findByContractIdOrderByCreatedAtAsc(UUID contractId);
+
+    /**
+     * DRAFT members of DRAFT Contracts for this customer, Room and start day. A draft cannot reference
+     * its Booking yet (the trigger requires the Booking to be CONVERTED), so conversion is matched by
+     * these attributes (D2); the caller compares the Slot.
+     */
+    @Query("""
+            select ct from ContractTenant ct, Contract c
+            where c.id = ct.contractId
+              and c.status = com.sba.project.modules.leasing.enums.ContractStatus.DRAFT
+              and ct.status = com.sba.project.modules.leasing.enums.ContractTenantStatus.DRAFT
+              and ct.tenantUserId = :userId and ct.roomId = :roomId and ct.startDate = :startDate
+            """)
+    List<ContractTenant> findDraftMembers(@Param("userId") UUID userId, @Param("roomId") UUID roomId,
+            @Param("startDate") LocalDate startDate);
+
     /** Whole-room request: any overstaying member keeps the Room occupied. */
     @Query("select count(ct) > 0 " + OVERSTAYING)
     boolean existsOverstayInRoom(@Param("roomId") UUID roomId, @Param("today") LocalDate today);
