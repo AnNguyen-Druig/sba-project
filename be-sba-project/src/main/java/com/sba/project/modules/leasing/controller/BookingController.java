@@ -5,6 +5,7 @@ import com.sba.project.common.base.PagedResponse;
 import com.sba.project.modules.leasing.dto.request.BookingCreateRequest;
 import com.sba.project.modules.leasing.dto.request.BookingDecisionRequest;
 import com.sba.project.modules.leasing.dto.request.BookingSearchRequest;
+import com.sba.project.modules.leasing.dto.response.BookingPaymentInstructionResponse;
 import com.sba.project.modules.leasing.dto.response.BookingResponse;
 import com.sba.project.modules.leasing.enums.BookingStatus;
 import com.sba.project.modules.leasing.service.BookingService;
@@ -69,6 +70,16 @@ public class BookingController {
     @GetMapping("/{bookingId}")
     public ResponseEntity<ApiResponse<BookingResponse>> getById(@PathVariable UUID bookingId) {
         return ResponseEntity.ok(ApiResponse.success(bookingService.getById(bookingId)));
+    }
+
+    /**
+     * P1-52: amount, reference and deadline for paying the hold deposit. Paying alone does not confirm
+     * the hold; it is confirmed only after the payment module verifies the money (P1-53).
+     */
+    @GetMapping("/{bookingId}/payment-instruction")
+    public ResponseEntity<ApiResponse<BookingPaymentInstructionResponse>> paymentInstruction(
+            @PathVariable UUID bookingId) {
+        return ResponseEntity.ok(ApiResponse.success(bookingService.getPaymentInstruction(bookingId)));
     }
 
     /** P1-51: there is no "approve" command — availability is checked automatically (BR-P09). */

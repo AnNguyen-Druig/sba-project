@@ -18,4 +18,10 @@ public interface PropertyQueryService {
 
     /** Policy in force now; throws {@code BRANCH_POLICY_NOT_FOUND} when the Branch has none (no hardcoded default). */
     BranchPolicyView currentPolicy(UUID branchId);
+
+    /** A policy version by id. Versions are immutable, so this is the terms frozen on a Booking. */
+    BranchPolicyView getPolicy(UUID policyId);
+
+    /** Branch payment QR shown on payment instructions; null when the Branch has not configured one. */
+    String getPaymentQrUrl(UUID branchId);
 }

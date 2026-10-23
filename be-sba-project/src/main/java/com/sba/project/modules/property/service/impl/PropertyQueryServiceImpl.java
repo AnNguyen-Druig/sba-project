@@ -10,6 +10,7 @@ import com.sba.project.modules.property.entity.BranchPolicy;
 import com.sba.project.modules.property.entity.Room;
 import com.sba.project.modules.property.entity.RoomSlot;
 import com.sba.project.modules.property.repository.BranchPolicyRepository;
+import com.sba.project.modules.property.repository.BranchRepository;
 import com.sba.project.modules.property.repository.RoomRepository;
 import com.sba.project.modules.property.repository.RoomSlotRepository;
 import com.sba.project.modules.property.service.PropertyQueryService;
@@ -25,6 +26,7 @@ public class PropertyQueryServiceImpl implements PropertyQueryService {
     private final RoomRepository roomRepository;
     private final RoomSlotRepository slotRepository;
     private final BranchPolicyRepository policyRepository;
+    private final BranchRepository branchRepository;
     private final Clock clock;
 
     @Override
@@ -48,9 +50,26 @@ public class PropertyQueryServiceImpl implements PropertyQueryService {
     @Override
     @Transactional(readOnly = true)
     public BranchPolicyView currentPolicy(UUID branchId) {
-        BranchPolicy policy = policyRepository
+        return toView(policyRepository
                 .findFirstByBranchIdAndEffectiveFromLessThanEqualOrderByVersionDesc(branchId, clock.instant())
-                .orElseThrow(() -> new AppException(ErrorCode.BRANCH_POLICY_NOT_FOUND));
+                .orElseThrow(() -> new AppException(ErrorCode.BRANCH_POLICY_NOT_FOUND)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BranchPolicyView getPolicy(UUID policyId) {
+        return toView(policyRepository.findById(policyId)
+                .orElseThrow(() -> new AppException(ErrorCode.BRANCH_POLICY_NOT_FOUND)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public String getPaymentQrUrl(UUID branchId) {
+        return branchRepository.findById(branchId).map(Branch::getQrUrl)
+                .orElseThrow(() -> new AppException(ErrorCode.BRANCH_NOT_FOUND));
+    }
+
+    private static BranchPolicyView toView(BranchPolicy policy) {
         return new BranchPolicyView(policy.getId(), policy.getBranchId(), policy.getVersion(),
                 policy.getEffectiveFrom(), policy.getBookingHoldAmount(), policy.getPaymentWindowMinutes(),
                 policy.getTemporaryHoldMinutes(), policy.getConfirmedHoldMinutes(), policy.getCancellationTerms());

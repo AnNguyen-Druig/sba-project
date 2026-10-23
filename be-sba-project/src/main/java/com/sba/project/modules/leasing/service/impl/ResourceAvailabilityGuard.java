@@ -3,8 +3,6 @@ package com.sba.project.modules.leasing.service.impl;
 import com.sba.project.common.exceptions.AppException;
 import com.sba.project.common.exceptions.ErrorCode;
 import com.sba.project.modules.leasing.entity.Booking;
-import com.sba.project.modules.leasing.enums.BookingStatus;
-import com.sba.project.modules.leasing.enums.HoldReleaseCause;
 import com.sba.project.modules.leasing.repository.BookingRepository;
 import com.sba.project.modules.leasing.repository.ContractTenantRepository;
 import com.sba.project.modules.leasing.repository.ResourceAllocationRepository;
@@ -27,7 +25,7 @@ class ResourceAvailabilityGuard {
     private final ResourceAllocationRepository allocationRepository;
     private final BookingRepository bookingRepository;
     private final ContractTenantRepository contractTenantRepository;
-    private final BookingHoldReleaser holdReleaser;
+    private final BookingHoldLifecycle holdLifecycle;
     private final Clock clock;
 
     /** @param slotId null for a whole-room request */
@@ -45,13 +43,12 @@ class ResourceAvailabilityGuard {
 
     /**
      * The overlap trigger ignores {@code expires_at}, so a lapsed hold blocks the Room until it is
-     * RELEASED. Release them here instead of waiting for the scheduled job (BR-P10a, BR-P11).
+     * RELEASED. Settle them here instead of waiting for the scheduled job (BR-P10a, BR-P11); a hold
+     * paid in time is confirmed rather than expired.
      */
     private void expireStaleHolds(UUID roomId) {
         for (Booking stale : bookingRepository.findStaleHoldsInRoom(roomId, clock.instant())) {
-            HoldReleaseCause cause = stale.getStatus() == BookingStatus.CONFIRMED
-                    ? HoldReleaseCause.CONFIRMED_HOLD_EXPIRED : HoldReleaseCause.PAYMENT_WINDOW_EXPIRED;
-            holdReleaser.release(stale, BookingStatus.EXPIRED, cause, null);
+            holdLifecycle.settleLapsed(stale);
         }
     }
 }

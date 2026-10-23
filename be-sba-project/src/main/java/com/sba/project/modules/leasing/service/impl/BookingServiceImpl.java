@@ -7,6 +7,7 @@ import com.sba.project.common.exceptions.ErrorCode;
 import com.sba.project.modules.leasing.dto.request.BookingCreateRequest;
 import com.sba.project.modules.leasing.dto.request.BookingDecisionRequest;
 import com.sba.project.modules.leasing.dto.request.BookingSearchRequest;
+import com.sba.project.modules.leasing.dto.response.BookingPaymentInstructionResponse;
 import com.sba.project.modules.leasing.dto.response.BookingResponse;
 import com.sba.project.modules.leasing.entity.Appointment;
 import com.sba.project.modules.leasing.entity.Booking;
@@ -21,6 +22,7 @@ import com.sba.project.modules.leasing.mapper.BookingMapper;
 import com.sba.project.modules.leasing.repository.AppointmentRepository;
 import com.sba.project.modules.leasing.repository.BookingRepository;
 import com.sba.project.modules.leasing.repository.ResourceAllocationRepository;
+import com.sba.project.modules.leasing.service.BookingFundsPort;
 import com.sba.project.modules.leasing.service.BookingService;
 import com.sba.project.modules.leasing.service.TenantAccessPolicy;
 import com.sba.project.modules.leasing.service.policy.LeasingDates;
@@ -32,11 +34,17 @@ import com.sba.project.modules.property.enums.BranchStatus;
 import com.sba.project.modules.property.enums.RoomOperationalStatus;
 import com.sba.project.modules.property.enums.RoomSlotStatus;
 import com.sba.project.modules.property.service.PropertyQueryService;
+import java.math.BigDecimal;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 import java.util.UUID;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -45,29 +53,39 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import tools.jackson.databind.node.JsonNodeFactory;
 import tools.jackson.databind.node.ObjectNode;
 
 @Service
+@Slf4j
 public class BookingServiceImpl implements BookingService {
     private static final Sort NEWEST_FIRST = Sort.by(Sort.Direction.DESC, "createdAt").and(Sort.by("id"));
+    private static final String REFERENCE_PREFIX = "BK";
+    private static final int REFERENCE_HEX_LENGTH = 12;
+    private static final int EXPIRY_BATCH = 200;
+    private static final DateTimeFormatter DEADLINE_FORMAT =
+            DateTimeFormatter.ofPattern("HH:mm dd/MM/yyyy").withZone(LeasingDates.ZONE);
 
     private final BookingRepository bookingRepository;
     private final ResourceAllocationRepository allocationRepository;
     private final AppointmentRepository appointmentRepository;
     private final PropertyQueryService propertyQueryService;
     private final ResourceAvailabilityGuard availabilityGuard;
-    private final BookingHoldReleaser holdReleaser;
+    private final BookingHoldLifecycle holdLifecycle;
+    private final BookingFundsPort fundsPort;
     private final BookingMapper bookingMapper;
     private final TenantAccessPolicy accessPolicy;
     private final AuditActorContext auditContext;
+    private final TransactionTemplate transactionTemplate;
     private final Clock clock;
     private final PaymentEnvironment paymentEnvironment;
 
     BookingServiceImpl(BookingRepository bookingRepository, ResourceAllocationRepository allocationRepository,
             AppointmentRepository appointmentRepository, PropertyQueryService propertyQueryService,
-            ResourceAvailabilityGuard availabilityGuard, BookingHoldReleaser holdReleaser, BookingMapper bookingMapper,
-            TenantAccessPolicy accessPolicy, AuditActorContext auditContext, Clock clock,
+            ResourceAvailabilityGuard availabilityGuard, BookingHoldLifecycle holdLifecycle,
+            BookingFundsPort fundsPort, BookingMapper bookingMapper, TenantAccessPolicy accessPolicy,
+            AuditActorContext auditContext, TransactionTemplate transactionTemplate, Clock clock,
             // REAL vs SANDBOX money is a server setting; never chosen by the client.
             @Value("${app.leasing.payment-environment:SANDBOX}") PaymentEnvironment paymentEnvironment) {
         this.bookingRepository = bookingRepository;
@@ -75,8 +93,10 @@ public class BookingServiceImpl implements BookingService {
         this.appointmentRepository = appointmentRepository;
         this.propertyQueryService = propertyQueryService;
         this.availabilityGuard = availabilityGuard;
-        this.holdReleaser = holdReleaser;
+        this.holdLifecycle = holdLifecycle;
+        this.fundsPort = fundsPort;
         this.bookingMapper = bookingMapper;
+        this.transactionTemplate = transactionTemplate;
         this.accessPolicy = accessPolicy;
         this.auditContext = auditContext;
         this.clock = clock;
@@ -167,13 +187,103 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findByIdForUpdate(bookingId)
                 .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
         requireBranchScope(actorId, booking.getBranchId());
-        if (!BookingHoldReleaser.LIVE_HOLD.contains(booking.getStatus())) {
+        if (!BookingHoldLifecycle.LIVE_HOLD.contains(booking.getStatus())) {
             throw new AppException(ErrorCode.LEASING_STATE_CONFLICT);
         }
         auditContext.bind(actorId);
-        HoldRefundOutcome outcome = holdReleaser.release(booking, BookingStatus.REJECTED,
+        HoldRefundOutcome outcome = holdLifecycle.release(booking, BookingStatus.REJECTED,
                 HoldReleaseCause.LANDLORD_REJECT, request.reason().trim());
         return bookingMapper.toResponse(booking, outcome);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public BookingPaymentInstructionResponse getPaymentInstruction(UUID bookingId) {
+        UUID actorId = accessPolicy.currentUserId();
+        Booking booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+        if (!actorId.equals(booking.getRequesterUserId())) throw new AppException(ErrorCode.UNAUTHORIZED);
+        if (booking.getStatus() == BookingStatus.EXPIRED || (booking.getStatus() == BookingStatus.AWAITING_PAYMENT
+                && clock.instant().isAfter(booking.getPaymentDueAt()))) {
+            throw new AppException(ErrorCode.BOOKING_EXPIRED);
+        }
+        if (booking.getStatus() != BookingStatus.AWAITING_PAYMENT) {
+            throw new AppException(ErrorCode.LEASING_STATE_CONFLICT);
+        }
+        BigDecimal verified = fundsPort.verifiedHold(bookingId).verifiedAmount();
+        BigDecimal amountDue = booking.getHoldAmount().subtract(verified).max(BigDecimal.ZERO);
+        String reference = paymentReference(bookingId);
+        String instructions = "Chuyển khoản %s đ với nội dung \"%s\" trước %s (giờ Việt Nam). Giữ chỗ chỉ được xác nhận sau khi khoản tiền được xác minh."
+                .formatted(amountDue.toPlainString(), reference, DEADLINE_FORMAT.format(booking.getPaymentDueAt()));
+        return new BookingPaymentInstructionResponse(bookingId, booking.getHoldAmount(), verified, amountDue,
+                reference, booking.getPaymentDueAt(), booking.getPaymentEnvironment(),
+                propertyQueryService.getPaymentQrUrl(booking.getBranchId()), instructions);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<UUID> findBookingIdByPaymentReference(String reference) {
+        if (reference == null) return Optional.empty();
+        String normalized = reference.trim().toUpperCase(Locale.ROOT);
+        if (!normalized.matches(REFERENCE_PREFIX + "[0-9A-F]{" + REFERENCE_HEX_LENGTH + "}")) return Optional.empty();
+        List<UUID> matches = bookingRepository.findIdsByHexPrefix(
+                normalized.substring(REFERENCE_PREFIX.length()).toLowerCase(Locale.ROOT) + "%");
+        // An ambiguous reference must go to manual review, never to a guessed Booking.
+        return matches.size() == 1 ? Optional.of(matches.get(0)) : Optional.empty();
+    }
+
+    @Override
+    @Transactional
+    public BookingResponse confirmHold(UUID bookingId) {
+        Booking booking = bookingRepository.findByIdForUpdate(bookingId)
+                .orElseThrow(() -> new AppException(ErrorCode.BOOKING_NOT_FOUND));
+        if (booking.getStatus() == BookingStatus.CONFIRMED) return bookingMapper.toResponse(booking);
+        if (booking.getStatus() == BookingStatus.EXPIRED) throw new AppException(ErrorCode.BOOKING_EXPIRED);
+        if (booking.getStatus() != BookingStatus.AWAITING_PAYMENT) {
+            throw new AppException(ErrorCode.LEASING_STATE_CONFLICT);
+        }
+        BookingFundsPort.VerifiedHold funds = fundsPort.verifiedHold(bookingId);
+        if (!BookingHoldLifecycle.isFullyPaidOnTime(booking, funds)) {
+            // Money completed after the deadline is a late payment for manual review (BR-P10c).
+            boolean late = funds.fullyPaidAt() != null && funds.fullyPaidAt().isAfter(booking.getPaymentDueAt());
+            throw new AppException(late ? ErrorCode.BOOKING_EXPIRED : ErrorCode.BOOKING_HOLD_FUNDS_INSUFFICIENT);
+        }
+        holdLifecycle.confirm(booking);
+        return bookingMapper.toResponse(booking);
+    }
+
+    /**
+     * Each lapsed hold is settled in its own transaction, taking the Room lock before the row lock
+     * (same order as the availability guard) so one failure or contention does not block the batch.
+     */
+    @Override
+    public int settleLapsedHolds() {
+        int settled = 0;
+        for (UUID bookingId : bookingRepository.findLapsedHoldIds(clock.instant(), PageRequest.of(0, EXPIRY_BATCH))) {
+            try {
+                if (Boolean.TRUE.equals(transactionTemplate.execute(status -> settleOne(bookingId)))) settled++;
+            } catch (RuntimeException ex) {
+                log.warn("Could not settle lapsed Booking hold {} ({})", bookingId, ex.getClass().getSimpleName());
+            }
+        }
+        return settled;
+    }
+
+    private boolean settleOne(UUID bookingId) {
+        UUID roomId = bookingRepository.findRoomIdById(bookingId).orElse(null);
+        if (roomId == null) return false;
+        allocationRepository.lockRoom(roomId.toString());
+        Booking booking = bookingRepository.findByIdForUpdate(bookingId).orElse(null);
+        // Re-check under lock: it may have been confirmed, cancelled or settled meanwhile.
+        if (booking == null || !BookingHoldLifecycle.isLapsed(booking, clock.instant())) return false;
+        holdLifecycle.settleLapsed(booking);
+        return true;
+    }
+
+    /** Fixed per Booking: "BK" + first 12 hex digits of its id (transfer-content friendly). */
+    private static String paymentReference(UUID bookingId) {
+        return REFERENCE_PREFIX + bookingId.toString().replace("-", "").substring(0, REFERENCE_HEX_LENGTH)
+                .toUpperCase(Locale.ROOT);
     }
 
     private void requireSlotMatchesMode(RentalMode mode, UUID roomId, UUID slotId) {
