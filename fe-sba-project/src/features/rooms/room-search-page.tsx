@@ -180,6 +180,7 @@ function Filters({
   )
 }
 export default function RoomSearchPage() {
+  const real = provider('catalog') === 'real'
   const [params, setParams] = useSearchParams()
   const parsed = parseFilters(params)
   const filters = parsed.success ? parsed.data : defaultFilters
@@ -230,8 +231,8 @@ export default function RoomSearchPage() {
       {provider('catalog') === 'real' && (
         <div className="mb-6">
           <Notice>
-            API phòng hiện hỗ trợ địa chỉ, giá, sức chứa và sắp xếp; hình thức thuê, khu vực chuẩn
-            hóa và lịch trống cần API bổ sung.
+            Bạn có thể tìm theo địa chỉ, giá, sức chứa và sắp xếp kết quả. Lọc theo hình thức thuê,
+            khu vực và lịch trống hiện chưa khả dụng.
           </Notice>
         </div>
       )}
@@ -269,7 +270,7 @@ export default function RoomSearchPage() {
                 <option value="recommended">Thứ tự mặc định</option>
                 <option value="price-asc">Giá thấp đến cao</option>
                 <option value="price-desc">Giá cao đến thấp</option>
-                <option value="area-desc">Diện tích lớn trước</option>
+                <option value="area-desc" disabled={real}>Diện tích lớn trước</option>
               </select>
             </div>
             {(filters.mode !== 'ALL' ||

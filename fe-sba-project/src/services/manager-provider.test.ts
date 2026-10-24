@@ -40,11 +40,10 @@ describe('Manager provider and session boundaries', () => {
     const { request } = await import('./http')
     await expect(
       request('manager', '/api/manager/branches', z.array(z.unknown())),
-    ).rejects.toMatchObject({ status: 404 })
-    expect(fetch).toHaveBeenCalledTimes(1)
-    expect(fetch.mock.calls[0][0]).toBe('https://api.example.test/api/manager/branches')
+    ).rejects.toMatchObject({ status: 501 })
+    expect(fetch).not.toHaveBeenCalled()
   })
-  it('rejects malformed responses at the Manager API boundary', async () => {
+  it('keeps the pending Manager API unavailable even if a fetch mock could return data', async () => {
     vi.stubEnv('VITE_API_MODE', 'real')
     vi.resetModules()
     vi.stubGlobal(
@@ -56,7 +55,7 @@ describe('Manager provider and session boundaries', () => {
         ),
     )
     const { managerApi } = await import('./manager')
-    await expect(managerApi.branches()).rejects.toMatchObject({ status: 502 })
+    await expect(managerApi.branches()).rejects.toMatchObject({ status: 501 })
   })
   it('does not let a delayed old-session 401 clear a newly signed-in account', async () => {
     vi.stubEnv('VITE_API_MODE', 'real')
@@ -72,7 +71,7 @@ describe('Manager provider and session boundaries', () => {
     const { useSession } = await import('@/features/auth/session-store')
     const { request } = await import('./http')
     useSession.getState().setSession({ accessToken: 'old-session', expiresIn: 900, user })
-    const pending = request('manager', '/api/manager/branches', z.array(z.unknown()))
+    const pending = request('notifications', '/api/notifications', z.array(z.unknown()))
     useSession.getState().setSession({ accessToken: 'new-session', expiresIn: 900, user })
     resolve(new Response(JSON.stringify({ code: 401, data: null }), { status: 401 }))
     await expect(pending).rejects.toMatchObject({ status: 401 })

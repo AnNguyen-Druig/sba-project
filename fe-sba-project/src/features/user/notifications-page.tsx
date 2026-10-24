@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { Link, useNavigate, useSearchParams } from 'react-router'
 import { useMutation, useQuery } from '@tanstack/react-query'
-import { Bell, CheckCheck, ArrowUpRight } from 'lucide-react'
+import { Bell, CheckCheck, ArrowUpRight, Send } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { InlineError, Page, Panel, Pagination, QueryState } from '@/components/common/page'
 import { notificationService } from '@/services/guest-user'
@@ -8,9 +9,13 @@ import { queryClient } from '@/services/query-client'
 import { dateTime, referenceLink } from '@/lib/activity'
 import { useSession } from '@/features/auth/session-store'
 import { provider } from '@/services/config'
+import { SendNotificationDialog } from './send-notification-dialog'
 export default function NotificationsPage() {
   const [params, setParams] = useSearchParams()
-  const userId = useSession((s) => s.user!.id)
+  const [sendOpen, setSendOpen] = useState(false)
+  const user = useSession((s) => s.user)
+  const userId = user?.id || ''
+  const canSend = user?.roles.some((r) => ['ADMIN', 'MANAGER', 'OWNER'].includes(r))
   const category = params.get('type') || ''
   const read = ['true', 'false'].includes(params.get('read') || '') ? params.get('read')! : ''
   const page = Math.max(1, Number(params.get('page') || 1) || 1)
@@ -41,17 +46,26 @@ export default function NotificationsPage() {
       eyebrow="THÔNG BÁO"
       description="Theo dõi phản hồi lịch xem phòng, giữ chỗ và trạng thái thanh toán."
       actions={
-        <Button
-          variant="outline"
-          loading={all.isPending}
-          onClick={() => all.mutate()}
-          disabled={!list.data?.content.some((n) => !n.read)}
-        >
-          <CheckCheck />
-          Đọc tất cả
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {canSend && (
+            <Button onClick={() => setSendOpen(true)}>
+              <Send size={16} />
+              Gửi thông báo
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            loading={all.isPending}
+            onClick={() => all.mutate()}
+            disabled={!list.data?.content.some((n) => !n.read)}
+          >
+            <CheckCheck />
+            Đọc tất cả
+          </Button>
+        </div>
       }
     >
+      <SendNotificationDialog open={sendOpen} onOpenChange={setSendOpen} />
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <select
           aria-label="Lọc thông báo"

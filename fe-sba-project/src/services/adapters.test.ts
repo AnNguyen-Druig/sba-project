@@ -74,7 +74,7 @@ describe('real/hybrid API boundaries', () => {
     vi.stubGlobal('fetch', fetcher)
     const { catalogService, defaultFilters } = await import('./guest-user')
     await expect(catalogService.rooms({ ...defaultFilters, mode: 'SLOT' })).rejects.toThrow(
-      /chưa hỗ trợ/,
+      /chưa khả dụng/,
     )
     expect(fetcher).not.toHaveBeenCalled()
   })

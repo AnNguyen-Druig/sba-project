@@ -6,7 +6,17 @@ Guest + Auth + User đã được triển khai trên `feature/fe-rebuild`, dùng
 
 Mặc định chạy ở chế độ `mock`. Tài khoản thử: `an@tropro.demo` / `TroPro@123`. Không chuyển tiền thật trong bản demo.
 
-Sao chép `.env.example` sang `.env.local`, đổi `VITE_API_MODE=hybrid` để dùng auth/notification BE và các tính năng còn thiếu qua mock. `real` gửi mọi yêu cầu đến BE và hiển thị lỗi khi endpoint chưa tồn tại. Khởi động lại Vite sau khi đổi cấu hình. Khi dùng email BE, đặt `FRONTEND_BASE_URL=http://localhost:5173` để liên kết xác minh mở đúng FE.
+Sao chép `.env.example` sang `.env.local`, đổi `VITE_API_MODE=hybrid` để dùng auth/notification BE và các tính năng còn thiếu qua mock. `real` gửi mọi yêu cầu đến BE và hiển thị lỗi khi endpoint chưa tồn tại. Khởi động lại Vite sau khi đổi cấu hình. Backend mặc định tạo liên kết xác minh tới `http://localhost:5173`; đặt `FRONTEND_BASE_URL` nếu FE chạy ở địa chỉ khác.
+
+Để chỉ dùng API thật cho đăng ký, đăng nhập và xác minh email trong khi giữ các chức năng khác ở mock, cấu hình `.env.local` như sau:
+
+```dotenv
+VITE_API_MODE=mock
+VITE_AUTH_PROVIDER=real
+```
+
+Frontend gọi `/api/auth/*` qua Vite proxy tới `http://localhost:8080` mặc định. Backend cần có cấu hình database hợp lệ và SMTP (`SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`). `SMTP_FROM` mặc định dùng `SMTP_USERNAME`; nếu nhà cung cấp mail yêu cầu địa chỉ gửi khác, hãy đặt `SMTP_FROM` thành địa chỉ đã xác thực. Backend mặc định tạo liên kết xác minh tới `http://localhost:5173`; đặt `FRONTEND_BASE_URL` nếu FE chạy ở địa chỉ khác. Đăng ký sẽ thất bại nếu BE không gửi được email; khi đó kiểm tra lỗi trên trang và log BE. Khởi động lại Vite sau khi sửa `.env.local`.
+Sao chép `.env.example` sang `.env.local` nếu cần cấu hình; giữ `VITE_API_MODE=real`. Vite chuyển `/api` tới `VITE_BACKEND_PROXY_TARGET` (mặc định `http://localhost:8080`). Khi deploy khác origin, đặt `VITE_API_BASE_URL` và cấu hình CORS/cookie ở BE theo origin thực tế. Khởi động lại Vite sau khi đổi cấu hình. Đặt `FRONTEND_BASE_URL=http://localhost:5173` ở BE để liên kết xác minh mở đúng FE.
 
 ## Chạy
 

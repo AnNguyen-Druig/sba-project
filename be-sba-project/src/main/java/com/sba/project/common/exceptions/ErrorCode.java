@@ -41,9 +41,9 @@ public enum ErrorCode {
     PASSWORD_INVALID(1116, "Password does not meet the required policy", HttpStatus.BAD_REQUEST),
     NAME_REQUIRED(1117, "Full name is required", HttpStatus.BAD_REQUEST),
     DATE_OF_BIRTH_INVALID(1118, "Date of birth is invalid", HttpStatus.BAD_REQUEST),
+    EMAIL_NOT_VERIFIED(1119, "Verify your email before logging in", HttpStatus.FORBIDDEN),
     OWNER_VERIFICATION_NOT_PENDING(1190, "Owner verification is not awaiting review", HttpStatus.CONFLICT),
     REVIEW_REASON_REQUIRED(1191, "A review reason is required", HttpStatus.BAD_REQUEST),
-    EMAIL_NOT_VERIFIED(1119, "Verify your email before logging in", HttpStatus.FORBIDDEN),
 
     // 1200-1299: property.
     BRANCH_NOT_FOUND(1200, "Branch not found", HttpStatus.NOT_FOUND),

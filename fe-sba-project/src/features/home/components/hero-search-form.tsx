@@ -20,12 +20,14 @@ import {
 import { cn } from '@/lib/utils'
 
 import { buildSearchUrl } from '../lib/build-search-url'
+import { provider } from '@/services/config'
 
 const quickAreas = areaOptions.filter((o) => (quickAreaKeys as readonly string[]).includes(o.value))
 
 type HeroSearchFormProps = { className?: string }
 
 export function HeroSearchForm({ className }: HeroSearchFormProps) {
+  const real = provider('catalog') === 'real'
   const navigate = useNavigate()
   const [area, setArea] = useState('')
   const [price, setPrice] = useState('')
@@ -49,7 +51,7 @@ export function HeroSearchForm({ className }: HeroSearchFormProps) {
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-[1.4fr_1fr_1fr_auto] lg:items-end">
         <div className="col-span-2 grid min-w-0 gap-1.5 sm:col-span-1">
           <Label htmlFor="search-area">Khu vực</Label>
-          <Select value={area} onValueChange={setArea}>
+          <Select value={area} onValueChange={setArea} disabled={real}>
             <SelectTrigger id="search-area">
               <SelectValue placeholder="Chọn khu vực" />
             </SelectTrigger>
@@ -81,7 +83,7 @@ export function HeroSearchForm({ className }: HeroSearchFormProps) {
 
         <div className="grid min-w-0 gap-1.5">
           <Label htmlFor="search-mode">Hình thức</Label>
-          <Select value={mode} onValueChange={setMode}>
+          <Select value={mode} onValueChange={setMode} disabled={real}>
             <SelectTrigger id="search-mode">
               <SelectValue placeholder="Tất cả" />
             </SelectTrigger>
@@ -101,7 +103,8 @@ export function HeroSearchForm({ className }: HeroSearchFormProps) {
         </Button>
       </div>
 
-      <nav aria-label="Gợi ý khu vực" className="mt-4 hidden border-t border-border pt-3 sm:block">
+      {real && <p className="mt-3 text-sm text-muted-foreground">Lọc theo khu vực và hình thức thuê hiện chưa khả dụng. Bạn có thể tìm theo khoảng giá.</p>}
+      {!real && <nav aria-label="Gợi ý khu vực" className="mt-4 hidden border-t border-border pt-3 sm:block">
         <ul className="flex flex-wrap items-center gap-2">
           <li className="mr-1 text-sm text-muted-foreground">Khám phá:</li>
           {quickAreas.map((o) => (
@@ -115,7 +118,7 @@ export function HeroSearchForm({ className }: HeroSearchFormProps) {
             </li>
           ))}
         </ul>
-      </nav>
+      </nav>}
     </form>
   )
 }

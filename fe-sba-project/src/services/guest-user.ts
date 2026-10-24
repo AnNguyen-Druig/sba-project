@@ -132,15 +132,16 @@ function query(filters: RoomFilters) {
   } else {
     if (filters.mode !== 'ALL' || filters.availableOnly || filters.area)
       throw new ApiError(
-        'API phòng hiện chưa hỗ trợ bộ lọc này. Chọn catalog provider mock để tìm theo hình thức thuê hoặc khả dụng.',
+        'Bộ lọc này chưa khả dụng. Vui lòng tìm theo địa chỉ, giá hoặc sức chứa.',
         422,
       )
     const sorts: Record<string, string> = {
-      recommended: 'createdAt,desc',
+      recommended: 'code,asc',
       'price-asc': 'referencePrice,asc',
       'price-desc': 'referencePrice,desc',
-      'area-desc': 'areaSqm,desc',
     }
+    if (filters.sort === 'area-desc')
+      throw new ApiError('API phòng hiện chưa hỗ trợ sắp xếp theo diện tích.', 422)
     params.set('sort', sorts[filters.sort] || sorts.recommended)
   }
   return params.toString()

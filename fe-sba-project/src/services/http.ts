@@ -2,6 +2,7 @@ import { z } from 'zod'
 import { useSession } from '@/features/auth/session-store'
 import { endpoint, provider, type Feature } from './config'
 import { sessionSchema, type Session } from '@/interfaces/domain'
+import { realApiIssue } from './real-api'
 
 export class ApiError extends Error {
   status: number
@@ -54,6 +55,10 @@ export async function request<T>(
   init: RequestInit = {},
   retry = true,
 ): Promise<T> {
+  if (provider(feature) === 'real') {
+    const issue = realApiIssue(feature, path, init.method || 'GET')
+    if (issue) throw new ApiError(issue, 501)
+  }
   const { accessToken: token, user } = useSession.getState()
   const scenario =
     provider(feature) === 'mock' && feature !== 'auth' && feature !== 'recovery'
@@ -102,6 +107,11 @@ export async function request<T>(
       if (useSession.getState().accessToken === token) useSession.getState().clear()
     }
     if (useSession.getState().accessToken) return request(feature, path, schema, init, false)
+  }
+  if (response.status === 204) {
+    const data = schema.safeParse(null)
+    if (!data.success) throw new ApiError('Phản hồi máy chủ không đúng định dạng.', response.status)
+    return data.data
   }
   const parsed = envelope.safeParse(await response.json().catch(() => null))
   if (!parsed.success) throw new ApiError('Phản hồi máy chủ không đúng định dạng.', response.status)

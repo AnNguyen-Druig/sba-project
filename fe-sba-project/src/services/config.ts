@@ -10,6 +10,7 @@ export type Feature =
   | 'owner'
   | 'admin'
   | 'adminUsers'
+  | 'utilities'
   | 'adminVerifications'
   | 'tenancies'
   | 'managerTenants'
@@ -17,10 +18,13 @@ export type Feature =
   | 'tenantMaintenance'
   | 'managerMaintenance'
 export type ApiMode = 'mock' | 'real' | 'hybrid'
-const configured = import.meta.env.VITE_API_MODE || 'mock'
+const testing = import.meta.env.MODE === 'test'
+const configured = import.meta.env.VITE_API_MODE || (testing ? 'mock' : 'real')
 if (!['mock', 'real', 'hybrid'].includes(configured))
   throw new Error('VITE_API_MODE phải là mock, real hoặc hybrid.')
 export const apiMode = configured as ApiMode
+if (!testing && apiMode !== 'real')
+  throw new Error('Ứng dụng sử dụng API thật. Chế độ mock/hybrid chỉ dành cho kiểm thử.')
 export function provider(feature: Feature): 'mock' | 'real' {
   // adminUsers -> VITE_ADMIN_USERS_PROVIDER
   const override = import.meta.env[
@@ -28,6 +32,8 @@ export function provider(feature: Feature): 'mock' | 'real' {
   ]
   if (override && !['mock', 'real'].includes(override))
     throw new Error(`Provider của ${feature} chưa hợp lệ.`)
+  if (!testing && override === 'mock')
+    throw new Error('Mock provider chỉ dành cho kiểm thử.')
   if (override) return override
   // Student 6 tenant directory follows its parent workspace unless overridden explicitly.
   if (feature === 'tenancies' || feature === 'tenantMaintenance') return provider('tenant')
@@ -41,6 +47,7 @@ export function provider(feature: Feature): 'mock' | 'real' {
   return feature === 'auth' ||
     feature === 'notifications' ||
     feature === 'adminUsers' ||
+    feature === 'utilities' ||
     feature === 'adminVerifications'
     ? 'real'
     : 'mock'
@@ -59,6 +66,7 @@ export const hasMocks = (
     'owner',
     'admin',
     'adminUsers',
+    'utilities',
     'adminVerifications',
     'tenancies',
     'managerTenants',
