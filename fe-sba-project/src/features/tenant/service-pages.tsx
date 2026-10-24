@@ -36,7 +36,7 @@ function RegisterService({
         note: '',
       },
     }),
-    mutation = useTenantMutation(tenantApi.registerService, onSuccess)
+    mutation = useTenantMutation((id, value: z.infer<typeof serviceInputSchema>) => tenantApi.registerService(id, { ...value, contractId: t.contractId, roomServiceId: s.id }), onSuccess)
   return (
     <form
       className="grid min-w-0 grid-cols-1 gap-5"
@@ -89,7 +89,7 @@ function RegisterService({
 }
 export function ServicesPage() {
   const { tenancy: t } = useTenant(),
-    query = useTenantQuery('services', tenantApi.services, [], true),
+    query = useTenantQuery('services', (id) => tenantApi.services(id, t), [], true),
     [selected, setSelected] = useState<TenantService | null>(null),
     [success, setSuccess] = useState('')
   const cancel = useTenantMutation(tenantApi.cancelService, () => {
@@ -183,7 +183,7 @@ export function ServicesPage() {
                     variant="outline"
                     loading={cancel.isPending}
                     disabled={!isActive(t) || current.status !== 'APPROVED'}
-                    onClick={() => cancel.mutate(current.id)}
+                    onClick={() => cancel.mutate(current.subscriptionId || current.id)}
                   >
                     Yêu cầu ngừng dịch vụ
                   </Button>

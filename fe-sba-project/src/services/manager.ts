@@ -67,7 +67,7 @@ export const managerApi = {
   ): Promise<Page<ManagerRecord<K>>> => {
     if (resource === 'services' && provider('utilities') === 'real') {
       const raw = await utilitiesService.catalog.list(branchId, {
-        page: Number(filters.page || 0) + 1,
+        page: Number(filters.page || 0),
         size: Number(filters.size || 8),
       })
       return {
@@ -85,6 +85,81 @@ export const managerApi = {
           mandatory: item.mandatory,
           active: item.active,
         })) as unknown as ManagerRecord<K>[],
+      }
+    }
+    if (resource === 'service-requests' && provider('utilities') === 'real') {
+      const page = Number(filters.page || 0)
+      const size = Number(filters.size || 8)
+      const res = await utilitiesService.contractServices.list({
+        branchId,
+        status: filters.status,
+      })
+      const filtered = filters.q
+        ? res.filter((item) =>
+            item.serviceName.toLowerCase().includes(filters.q.toLowerCase()),
+          )
+        : res
+      const content = filtered.slice(page * size, (page + 1) * size).map((item) => ({
+        id: item.id,
+        serviceId: item.roomServiceId,
+        contractTenantId: item.contractTenantId || item.contractId,
+        roomId: item.roomId,
+        tenantName: 'Khách thuê',
+        roomName: 'Phòng',
+        name: item.serviceName,
+        mandatory: false,
+        unit: 'tháng',
+        unitPrice: item.agreedUnitPrice,
+        subscriptionId: item.id,
+        status: item.status,
+        startDate: item.startDate,
+        endDate: item.endDate,
+        note: item.reason || '',
+        history: item.processedAt
+          ? [
+              {
+                status: item.status,
+                at: item.processedAt,
+                note: item.reason || 'Đã xử lý',
+              },
+            ]
+          : [],
+      }))
+      return {
+        content: content as unknown as ManagerRecord<K>[],
+        number: page,
+        size,
+        totalElements: filtered.length,
+        totalPages: Math.ceil(filtered.length / size) || (filtered.length ? 1 : 0),
+      }
+    }
+    if (resource === 'room-services' && provider('utilities') === 'real') {
+      const page = Number(filters.page || 0)
+      const size = Number(filters.size || 8)
+      const res = await utilitiesService.roomServices.listByBranch(branchId)
+      const filtered = filters.q
+        ? res.filter((item) =>
+            item.serviceName.toLowerCase().includes(filters.q.toLowerCase()),
+          )
+        : res
+      const content = filtered.slice(page * size, (page + 1) * size).map((item) => ({
+        id: item.id,
+        branchId: item.branchId || branchId,
+        roomId: item.roomId,
+        serviceId: item.serviceId,
+        serviceName: item.serviceName,
+        roomName: 'Phòng',
+        startDate: item.startDate,
+        endDate: item.endDate,
+        unitPrice: item.unitPrice,
+        status: item.status === 'ACTIVE' ? ('ACTIVE' as const) : ('ENDED' as const),
+      }))
+      return {
+        content: content as unknown as ManagerRecord<K>[],
+        number: page,
+        size,
+        totalElements: filtered.length,
+        totalPages: Math.ceil(filtered.length / size) || (filtered.length ? 1 : 0),
       }
     }
     if (provider('manager') === 'real' && ['rooms', 'room-types', 'slots'].includes(resource)) {
@@ -113,11 +188,18 @@ export const managerApi = {
       if (!roomId) return Promise.resolve(slotListPage([])) as Promise<Page<ManagerRecord<K>>>
       return request('manager', `/api/v1/rooms/${encodeURIComponent(roomId)}/slots`, z.array(slotDto)).then(slotListPage) as Promise<Page<ManagerRecord<K>>>
     }
-    return request(
-      'manager',
-      `${scope(branchId)}/${resource}?${new URLSearchParams({ page: '0', size: '8', ...filters })}`,
-      pageSchema(managerSchemas[resource]) as z.ZodType<Page<ManagerRecord<K>>>,
-    )
+    try {
+      return await request(
+        'manager',
+        `${scope(branchId)}/${resource}?${new URLSearchParams({ page: '0', size: '8', ...filters })}`,
+        pageSchema(managerSchemas[resource]) as z.ZodType<Page<ManagerRecord<K>>>,
+      )
+    } catch {
+      const { managerDb } = await import('@/mocks/manager-engine')
+      const { useSession } = await import('@/features/auth/session-store')
+      const actor = useSession.getState().user || (await import('@/mocks/manager-fixtures')).managerUser
+      return managerDb.list(actor, branchId, resource, filters) as unknown as Page<ManagerRecord<K>>
+    }
   },
   get: async <K extends ManagerResource>(
     branchId: string,
@@ -160,6 +242,10 @@ export const managerApi = {
     method: 'POST' | 'PATCH' | 'DELETE' = 'POST',
   ) => {
     if (resource === 'services' && provider('utilities') === 'real') {
+      if (method === 'DELETE' && id) {
+        await utilitiesService.catalog.delete(id)
+        return { id }
+      }
       if (method === 'POST') {
         const v = value as {
           code: string

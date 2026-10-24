@@ -17,12 +17,24 @@ import org.mapstruct.NullValuePropertyMappingStrategy;
 public interface RoomServiceMapper {
 
     @Mapping(target = "serviceName", ignore = true)
+    @Mapping(target = "mandatory", ignore = true)
+    @Mapping(target = "unit", ignore = true)
     RoomServiceResponse toResponse(RoomService entity);
 
     default RoomServiceResponse toResponse(RoomService entity, String serviceName) {
         RoomServiceResponse response = toResponse(entity);
         if (response != null) {
             response.setServiceName(serviceName);
+        }
+        return response;
+    }
+
+    default RoomServiceResponse toResponse(RoomService entity, String serviceName, Boolean mandatory, String unit) {
+        RoomServiceResponse response = toResponse(entity);
+        if (response != null) {
+            response.setServiceName(serviceName);
+            response.setMandatory(mandatory);
+            response.setUnit(unit);
         }
         return response;
     }

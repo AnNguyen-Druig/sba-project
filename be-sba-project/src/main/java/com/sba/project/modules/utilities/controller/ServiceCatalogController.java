@@ -16,6 +16,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -66,6 +67,16 @@ public class ServiceCatalogController {
     /**
      * Retrieves a service catalog entry by ID.
      */
+    /**
+     * [P1-68] Deletes a service catalog entry if not referenced in room configurations.
+     */
+    @DeleteMapping("/services/{serviceId}")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'STAFF')")
+    public ResponseEntity<ApiResponse<Void>> deleteService(@PathVariable UUID serviceId) {
+        utilityServiceManager.deleteService(serviceId);
+        return ResponseEntity.ok(ApiResponse.success("Service deleted successfully", null));
+    }
+
     @GetMapping("/services/{serviceId}")
     public ResponseEntity<ApiResponse<ServiceCatalogResponse>> getService(@PathVariable UUID serviceId) {
         ServiceCatalogResponse response = utilityServiceManager.getService(serviceId);
@@ -81,7 +92,7 @@ public class ServiceCatalogController {
             @RequestParam(required = false) ServiceType type,
             @RequestParam(required = false) Boolean mandatory,
             @RequestParam(required = false) Boolean active,
-            @PageableDefault(page = 1, size = 20, sort = "code", direction = Sort.Direction.ASC) Pageable pageable) {
+            @PageableDefault(size = 20, sort = "code", direction = Sort.Direction.ASC) Pageable pageable) {
 
         PagedResponse<ServiceCatalogResponse> response = utilityServiceManager
                 .listServices(branchId, type, mandatory, active, pageable);

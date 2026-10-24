@@ -44,7 +44,7 @@ public class RoomServiceImpl implements RoomService {
     public Page<RoomResponse> search(RoomSearchRequest c, Pageable p) {
         validatePrice(c);
         return rooms.search(false, c.getBranchId(), c.getRoomTypeId(), c.getMinPrice(), c.getMaxPrice(),
-                c.getMinCapacity(), normalize(c.getStatus()), normalize(c.getAddress()), p).map(mapper::toResponse);
+                c.getMinCapacity(), normalize(c.getStatus()), toAddressPattern(c.getAddress()), p).map(mapper::toResponse);
     }
 
     @Override @Transactional
@@ -72,7 +72,7 @@ public class RoomServiceImpl implements RoomService {
         Pageable effective = p.getSort().isUnsorted()
                 ? PageRequest.of(p.getPageNumber(), p.getPageSize(), Sort.by("code")) : p;
         return rooms.search(true, c.getBranchId(), c.getRoomTypeId(), c.getMinPrice(), c.getMaxPrice(),
-                c.getMinCapacity(), normalize(c.getStatus()), normalize(c.getAddress()), effective)
+                c.getMinCapacity(), normalize(c.getStatus()), toAddressPattern(c.getAddress()), effective)
                 .map(this::toPublicResponse);
     }
 
@@ -156,6 +156,10 @@ public class RoomServiceImpl implements RoomService {
             throw new AppException(ErrorCode.INVALID_REQUEST, "Không hỗ trợ sắp xếp theo: " + order.getProperty());
     }
     private String normalize(String value) { return value == null || value.isBlank() ? null : value.trim(); }
+    private String toAddressPattern(String address) {
+        String normalized = normalize(address);
+        return normalized == null ? null : "%" + normalized.toLowerCase() + "%";
+    }
     private PublicRoomResponse toPublicResponse(Room room) {
         Branch branch = entityManager.find(Branch.class, room.getBranchId());
         RoomType type = requireType(room.getRoomTypeId());

@@ -22,11 +22,11 @@ public interface RoomRepository extends JpaRepository<Room, UUID> {
           and (:minPrice is null or r.referencePrice >= :minPrice)
           and (:maxPrice is null or r.referencePrice <= :maxPrice)
           and (:minCapacity is null or r.capacity >= :minCapacity)
-          and (:status is null or str(r.operationalStatus) = :status)
-          and (:address is null or lower(b.address) like lower(concat('%', :address, '%')))
+          and (cast(:status as string) is null or str(r.operationalStatus) = :status)
+          and (cast(:addressPattern as string) is null or lower(b.address) like cast(:addressPattern as string))
         """)
     Page<Room> search(@Param("publicOnly") boolean publicOnly, @Param("branchId") UUID branchId,
                       @Param("roomTypeId") UUID roomTypeId, @Param("minPrice") BigDecimal minPrice,
                       @Param("maxPrice") BigDecimal maxPrice, @Param("minCapacity") Integer minCapacity,
-                      @Param("status") String status, @Param("address") String address, Pageable pageable);
+                      @Param("status") String status, @Param("addressPattern") String addressPattern, Pageable pageable);
 }

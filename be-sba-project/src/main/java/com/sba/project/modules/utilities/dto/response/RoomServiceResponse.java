@@ -24,6 +24,8 @@ public class RoomServiceResponse {
     private UUID branchId;
     private UUID serviceId;
     private String serviceName;
+    private Boolean mandatory;
+    private String unit;
     private LocalDate startDate;
     private LocalDate endDate;
     private BigDecimal unitPrice;

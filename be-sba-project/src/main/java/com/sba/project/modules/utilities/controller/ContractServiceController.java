@@ -86,4 +86,19 @@ public class ContractServiceController {
         List<ContractServiceResponse> response = utilityServiceManager.listContractServices(contractId, status);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
+
+    /**
+     * Lists contract services filtered by contractId, branchId, roomId, and/or status.
+     */
+    @GetMapping("/contract-services")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'STAFF', 'ADMIN', 'TENANT')")
+    public ResponseEntity<ApiResponse<List<ContractServiceResponse>>> listAllContractServices(
+            @RequestParam(required = false) UUID contractId,
+            @RequestParam(required = false) UUID branchId,
+            @RequestParam(required = false) UUID roomId,
+            @RequestParam(required = false) ContractServiceStatus status) {
+
+        List<ContractServiceResponse> response = utilityServiceManager.searchContractServices(contractId, branchId, roomId, status);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
 }

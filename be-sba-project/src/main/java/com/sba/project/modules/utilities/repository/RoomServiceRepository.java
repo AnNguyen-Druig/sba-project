@@ -22,4 +22,6 @@ public interface RoomServiceRepository extends JpaRepository<RoomService, UUID>,
     Optional<RoomService> findByRoomIdAndServiceId(UUID roomId, UUID serviceId);
 
     List<RoomService> findByRoomId(UUID roomId);
+
+    boolean existsByServiceId(UUID serviceId);
 }

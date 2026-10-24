@@ -127,7 +127,12 @@ export async function request<T>(
     )
   }
   const data = schema.safeParse(body.data)
-  if (!data.success) throw new ApiError('Dữ liệu máy chủ chưa khớp hợp đồng API.', 502)
+  if (!data.success) {
+    if (import.meta.env.DEV) {
+      console.error('[API Contract mismatch]', path, data.error.issues, 'payload was:', body.data)
+    }
+    throw new ApiError('Dữ liệu máy chủ chưa khớp hợp đồng API.', 502)
+  }
   return data.data
 }
 export const write = (method: string, value?: unknown): RequestInit => ({

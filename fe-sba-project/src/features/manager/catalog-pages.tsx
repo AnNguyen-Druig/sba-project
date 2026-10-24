@@ -291,9 +291,24 @@ function CatalogPage({ kind }: { kind: Kind }) {
                 >
                   {kind === 'room-services' ? 'Giai đoạn giá mới' : 'Chỉnh sửa'}
                 </Button>
-                {(kind === 'room-types' || kind === 'furnitures') && (
-                  <Button variant="ghost" className="text-danger" onClick={() => setDeleting(r.id)}>
-                    Xóa
+                {(kind === 'room-types' || kind === 'furnitures' || kind === 'services') && (
+                  <Button
+                    variant="ghost"
+                    className={kind === 'services' && !r.active ? 'text-primary' : 'text-danger'}
+                    onClick={() => {
+                      if (kind === 'services' && !r.active) {
+                        mutation.mutate({
+                          resource: kind,
+                          id: String(r.id),
+                          value: { active: true },
+                          method: 'PATCH',
+                        })
+                      } else {
+                        setDeleting(r.id)
+                      }
+                    }}
+                  >
+                    {kind === 'services' ? (r.active ? 'Ẩn' : 'Hiện') : 'Xóa'}
                   </Button>
                 )}
               </div>
@@ -332,7 +347,11 @@ function CatalogPage({ kind }: { kind: Kind }) {
         )}
       </Modal>
       <ActionDialog
-        title="Xóa khi không còn hồ sơ tham chiếu?"
+        title={
+          kind === 'services'
+            ? 'Ẩn dịch vụ này (ngừng cung cấp)?'
+            : 'Xóa khi không còn hồ sơ tham chiếu?'
+        }
         open={!!deleting}
         onOpenChange={() => setDeleting(null)}
         pending={mutation.isPending}

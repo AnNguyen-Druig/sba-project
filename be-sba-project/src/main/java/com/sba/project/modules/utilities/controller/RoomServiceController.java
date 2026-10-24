@@ -4,6 +4,7 @@ import com.sba.project.common.base.ApiResponse;
 import com.sba.project.modules.utilities.dto.request.CreateRoomServiceRequest;
 import com.sba.project.modules.utilities.dto.request.UpdateRoomServiceRequest;
 import com.sba.project.modules.utilities.dto.response.RoomServiceResponse;
+import com.sba.project.modules.utilities.enums.RoomServiceStatus;
 import com.sba.project.modules.utilities.service.UtilityServiceManager;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
@@ -63,6 +65,19 @@ public class RoomServiceController {
     @GetMapping("/rooms/{roomId}/services")
     public ResponseEntity<ApiResponse<List<RoomServiceResponse>>> listRoomServices(@PathVariable UUID roomId) {
         List<RoomServiceResponse> response = utilityServiceManager.listRoomServices(roomId);
+        return ResponseEntity.ok(ApiResponse.success(response));
+    }
+
+    /**
+     * Lists all service configurations across a branch.
+     */
+    @GetMapping("/branches/{branchId}/room-services")
+    @PreAuthorize("hasAnyRole('OWNER', 'MANAGER', 'STAFF')")
+    public ResponseEntity<ApiResponse<List<RoomServiceResponse>>> listBranchRoomServices(
+            @PathVariable UUID branchId,
+            @RequestParam(required = false) RoomServiceStatus status) {
+
+        List<RoomServiceResponse> response = utilityServiceManager.listBranchRoomServices(branchId, status);
         return ResponseEntity.ok(ApiResponse.success(response));
     }
 }

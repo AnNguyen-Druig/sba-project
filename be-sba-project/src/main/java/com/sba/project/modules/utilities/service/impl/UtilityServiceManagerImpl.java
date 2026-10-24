@@ -139,17 +139,44 @@ public class UtilityServiceManagerImpl implements UtilityServiceManager {
         Specification<ServiceCatalog> spec = ServiceCatalogSpecification.withFilters(
                 branchId, type, null, mandatory, active, null);
 
-        Page<ServiceCatalog> page = serviceCatalogRepository.findAll(spec, pageable);
+        Pageable actualPageable = pageable;
+        if (pageable.getPageNumber() > 0) {
+            long total = serviceCatalogRepository.count(spec);
+            if ((long) pageable.getPageNumber() * pageable.getPageSize() >= total) {
+                int zeroBasedIndex = Math.max(0, pageable.getPageNumber() - 1);
+                actualPageable = org.springframework.data.domain.PageRequest.of(zeroBasedIndex, pageable.getPageSize(), pageable.getSort());
+            }
+        }
+
+        Page<ServiceCatalog> page = serviceCatalogRepository.findAll(spec, actualPageable);
         List<ServiceCatalogResponse> dtoList = page.getContent().stream()
                 .map(serviceCatalogMapper::toResponse)
                 .toList();
 
-        return PagedResponse.of(dtoList, pageable.getPageNumber(), pageable.getPageSize(), page.getTotalElements());
+        return PagedResponse.of(dtoList, page.getNumber() + 1, page.getSize(), page.getTotalElements());
     }
 
     /**
      * [P1-69] Configures service pricing and billing configuration per room.
      */
+    @Override
+    @Transactional
+    public void deleteService(UUID serviceId) {
+        log.info("Hiding (soft-deleting) service catalog id={}", serviceId);
+
+        ServiceCatalog service = serviceCatalogRepository.findById(serviceId)
+                .orElseThrow(() -> new AppException(ErrorCode.SERVICE_NOT_FOUND));
+
+        if (service.getMandatory() != null && service.getMandatory() &&
+                (service.getServiceType() == ServiceType.ELECTRICITY || service.getServiceType() == ServiceType.WATER)) {
+            throw new AppException(ErrorCode.DATA_CONFLICT, "Không thể ẩn dịch vụ bắt buộc hệ thống");
+        }
+
+        service.setActive(false);
+        serviceCatalogRepository.save(service);
+        log.info("Successfully hid service catalog id={}", serviceId);
+    }
+
     @Override
     @Transactional
     public RoomServiceResponse configureRoomService(UUID branchId, CreateRoomServiceRequest request) {
@@ -179,7 +206,7 @@ public class UtilityServiceManagerImpl implements UtilityServiceManager {
 
         RoomService saved = roomServiceRepository.save(roomService);
         log.info("Configured room service id={} for room={}", saved.getId(), saved.getRoomId());
-        return roomServiceMapper.toResponse(saved, catalog.getName());
+        return roomServiceMapper.toResponse(saved, catalog.getName(), catalog.getMandatory(), catalog.getUnit());
     }
 
     /**
@@ -207,7 +234,7 @@ public class UtilityServiceManagerImpl implements UtilityServiceManager {
         roomServiceMapper.updateEntity(roomService, request);
         RoomService saved = roomServiceRepository.save(roomService);
         log.info("Updated room service id={}", saved.getId());
-        return roomServiceMapper.toResponse(saved, catalog.getName());
+        return roomServiceMapper.toResponse(saved, catalog.getName(), catalog.getMandatory(), catalog.getUnit());
     }
 
     /**
@@ -226,7 +253,35 @@ public class UtilityServiceManagerImpl implements UtilityServiceManager {
                 .map(rs -> {
                     ServiceCatalog cat = catalogMap.get(rs.getServiceId());
                     String name = cat != null ? cat.getName() : "Unknown Service";
-                    return roomServiceMapper.toResponse(rs, name);
+                    Boolean mandatory = cat != null ? cat.getMandatory() : false;
+                    String unit = cat != null ? cat.getUnit() : "tháng";
+                    return roomServiceMapper.toResponse(rs, name, mandatory, unit);
+                })
+                .toList();
+    }
+
+    /**
+     * Lists all service configurations across a branch.
+     */
+    @Override
+    public List<RoomServiceResponse> listBranchRoomServices(UUID branchId, RoomServiceStatus status) {
+        List<RoomService> list = (status != null)
+                ? roomServiceRepository.findByBranchIdAndStatus(branchId, status)
+                : roomServiceRepository.findAll().stream().filter(rs -> rs.getBranchId().equals(branchId)).toList();
+
+        if (list.isEmpty()) {
+            return List.of();
+        }
+
+        Map<UUID, ServiceCatalog> catalogMap = loadCatalogsForRoomServices(list);
+
+        return list.stream()
+                .map(rs -> {
+                    ServiceCatalog cat = catalogMap.get(rs.getServiceId());
+                    String name = cat != null ? cat.getName() : "Unknown Service";
+                    Boolean mandatory = cat != null ? cat.getMandatory() : false;
+                    String unit = cat != null ? cat.getUnit() : "tháng";
+                    return roomServiceMapper.toResponse(rs, name, mandatory, unit);
                 })
                 .toList();
     }
@@ -368,6 +423,47 @@ public class UtilityServiceManagerImpl implements UtilityServiceManager {
             return List.of();
         }
 
+        return mapContractServicesToResponse(list);
+    }
+
+    /**
+     * Lists contract services filtered by contractId, branchId, roomId, and/or status.
+     */
+    @Override
+    public List<ContractServiceResponse> searchContractServices(UUID contractId, UUID branchId, UUID roomId, ContractServiceStatus status) {
+        List<ContractService> list;
+        if (contractId != null) {
+            list = (status != null)
+                    ? contractServiceRepository.findByContractIdAndStatus(contractId, status)
+                    : contractServiceRepository.findByContractId(contractId);
+        } else if (roomId != null) {
+            list = (status != null)
+                    ? contractServiceRepository.findByRoomIdAndStatus(roomId, status)
+                    : contractServiceRepository.findAll().stream().filter(cs -> cs.getRoomId().equals(roomId)).toList();
+        } else if (branchId != null) {
+            List<RoomService> branchRoomServices = roomServiceRepository.findAll().stream()
+                    .filter(rs -> rs.getBranchId().equals(branchId)).toList();
+            List<UUID> rsIds = branchRoomServices.stream().map(RoomService::getId).toList();
+            if (rsIds.isEmpty()) {
+                return List.of();
+            }
+            list = (status != null)
+                    ? contractServiceRepository.findByRoomServiceIdInAndStatus(rsIds, status)
+                    : contractServiceRepository.findByRoomServiceIdIn(rsIds);
+        } else {
+            list = (status != null)
+                    ? contractServiceRepository.findByStatus(status)
+                    : contractServiceRepository.findAll();
+        }
+
+        if (list.isEmpty()) {
+            return List.of();
+        }
+
+        return mapContractServicesToResponse(list);
+    }
+
+    private List<ContractServiceResponse> mapContractServicesToResponse(List<ContractService> list) {
         List<UUID> roomServiceIds = list.stream().map(ContractService::getRoomServiceId).distinct().toList();
         Map<UUID, RoomService> roomServiceMap = roomServiceRepository.findAllById(roomServiceIds).stream()
                 .collect(Collectors.toMap(RoomService::getId, Function.identity()));

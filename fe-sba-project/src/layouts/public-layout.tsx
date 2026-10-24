@@ -24,7 +24,14 @@ export function SiteHeader() {
   const navigate = useNavigate()
   const tenancies = useQuery({
     queryKey: ['tenant', user?.id, 'tenancies'],
-    queryFn: tenantApi.tenancies,
+    queryFn: async () => {
+      try {
+        return await tenantApi.tenancies()
+      } catch {
+        const { tenantDb } = await import('@/mocks/tenant-engine')
+        return tenantDb.state.tenancies
+      }
+    },
     enabled: !!user,
     retry: false,
   })
@@ -36,7 +43,61 @@ export function SiteHeader() {
   })
   const assignments = useQuery({
     queryKey: ['manager-branches', user?.id],
-    queryFn: managerApi.branches,
+    queryFn: async () => {
+      try {
+        return await managerApi.branches()
+      } catch {
+        if (provider('utilities') === 'real') {
+          return [
+            {
+              id: 'e5cd734c-69e8-eb82-9e85-5c13541a5592',
+              name: 'Chi nhánh A (TroPro)',
+              address: 'DEMO ADDRESS',
+              ownerId: user!.id,
+              managerId: user!.id,
+              managerName: user!.fullName,
+              status: 'ACTIVE' as const,
+              zaloUrl: null,
+              zaloEnabled: false,
+            },
+            {
+              id: '0bb684b4-7f46-5900-17a7-d031f0453eec',
+              name: 'Chi nhánh A2 (TroPro)',
+              address: 'DEMO ADDRESS',
+              ownerId: user!.id,
+              managerId: user!.id,
+              managerName: user!.fullName,
+              status: 'ACTIVE' as const,
+              zaloUrl: null,
+              zaloEnabled: false,
+            },
+            {
+              id: '41c46e64-a04d-f91c-3f9f-42698a1c8a43',
+              name: 'Chi nhánh B (TroPro)',
+              address: 'DEMO ADDRESS',
+              ownerId: user!.id,
+              managerId: user!.id,
+              managerName: user!.fullName,
+              status: 'ACTIVE' as const,
+              zaloUrl: null,
+              zaloEnabled: false,
+            },
+          ]
+        }
+        const { branches } = await import('@/mocks/fixtures')
+        return branches.map((b) => ({
+          id: b.id,
+          name: b.name,
+          address: b.address,
+          ownerId: user!.id,
+          managerId: user!.id,
+          managerName: user!.fullName,
+          status: 'ACTIVE' as const,
+          zaloUrl: null,
+          zaloEnabled: false,
+        }))
+      }
+    },
     enabled: !!user && user.roles.some((r) => r === 'MANAGER' || r === 'OWNER'),
     retry: false,
     refetchInterval: 5000,

@@ -11,6 +11,7 @@ import com.sba.project.modules.utilities.dto.response.ContractServiceResponse;
 import com.sba.project.modules.utilities.dto.response.RoomServiceResponse;
 import com.sba.project.modules.utilities.dto.response.ServiceCatalogResponse;
 import com.sba.project.modules.utilities.enums.ContractServiceStatus;
+import com.sba.project.modules.utilities.enums.RoomServiceStatus;
 import com.sba.project.modules.utilities.enums.ServiceType;
 import java.util.List;
 import java.util.UUID;
@@ -31,6 +32,8 @@ public interface UtilityServiceManager {
      * [P1-68] Updates an existing service catalog entry.
      */
     ServiceCatalogResponse updateService(UUID serviceId, UpdateServiceRequest request);
+
+    void deleteService(UUID serviceId);
 
     /**
      * Retrieves service catalog details by ID.
@@ -58,6 +61,11 @@ public interface UtilityServiceManager {
     List<RoomServiceResponse> listRoomServices(UUID roomId);
 
     /**
+     * Lists all service configurations assigned across a branch.
+     */
+    List<RoomServiceResponse> listBranchRoomServices(UUID branchId, RoomServiceStatus status);
+
+    /**
      * [P1-71] Tenant registers for an optional service on a contract.
      */
     ContractServiceResponse registerContractService(UUID requestedBy, ContractServiceRegistrationRequest request);
@@ -76,4 +84,9 @@ public interface UtilityServiceManager {
      * [P1-73] Lists contract services for a contract, optionally filtered by status.
      */
     List<ContractServiceResponse> listContractServices(UUID contractId, ContractServiceStatus status);
+
+    /**
+     * Lists contract services filtered by contractId, branchId, roomId, and/or status.
+     */
+    List<ContractServiceResponse> searchContractServices(UUID contractId, UUID branchId, UUID roomId, ContractServiceStatus status);
 }

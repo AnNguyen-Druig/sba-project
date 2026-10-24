@@ -23,4 +23,10 @@ public interface ContractServiceRepository extends JpaRepository<ContractService
     List<ContractService> findByRoomIdAndStatus(UUID roomId, ContractServiceStatus status);
 
     List<ContractService> findByContractId(UUID contractId);
+
+    List<ContractService> findByRoomServiceIdIn(List<UUID> roomServiceIds);
+
+    List<ContractService> findByRoomServiceIdInAndStatus(List<UUID> roomServiceIds, ContractServiceStatus status);
+
+    List<ContractService> findByStatus(ContractServiceStatus status);
 }
