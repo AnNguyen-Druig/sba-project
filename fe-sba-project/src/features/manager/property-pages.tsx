@@ -7,6 +7,7 @@ import { Facts } from '@/features/tenant/components'
 import { formatVnd } from '@/lib/format'
 import { dateOnly } from '@/lib/activity'
 import { managerApi } from '@/services/manager'
+import { provider } from '@/services/config'
 import { roomInputSchema, slotInputSchema, type ManagerSlot } from '@/interfaces/manager'
 import {
   ManagerPage,
@@ -608,6 +609,8 @@ export function ManagerSlots() {
 }
 export function ManagerTenants() {
   const { branch } = useManager(),
+    // GET /api/tenants filters by branch only; search/status/slot/date filters are not supported.
+    real = provider('managerTenants') === 'real',
     [params] = useState(() => new URLSearchParams(location.search)),
     [q, setQ] = useState(''),
     [status, setStatus] = useState(''),
@@ -637,83 +640,85 @@ export function ManagerTenants() {
         </ManagerLink>
       }
     >
-      <div className="flex flex-wrap gap-3">
-        <SearchBox
-          value={q}
-          onChange={(v) => {
-            setQ(v)
-            setPage(1)
-          }}
-        />
-        <select
-          aria-label="Phòng"
-          className="input w-auto max-w-full"
-          value={roomId}
-          onChange={(e) => {
-            setRoom(e.target.value)
-            setSlot('')
-            setPage(1)
-          }}
-        >
-          <option value="">Tất cả phòng</option>
-          {rooms.data?.content.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.code}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Chỗ ở"
-          className="input w-auto"
-          value={slotId}
-          onChange={(e) => {
-            setSlot(e.target.value)
-            setPage(1)
-          }}
-        >
-          <option value="">Tất cả chỗ</option>
-          {slots.data?.content.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name}
-            </option>
-          ))}
-        </select>
-        <select
-          aria-label="Quan hệ thuê"
-          className="input w-auto"
-          value={status}
-          onChange={(e) => {
-            setStatus(e.target.value)
-            setPage(1)
-          }}
-        >
-          <option value="">Tất cả trạng thái</option>
-          <option value="ACTIVE">Đang thuê</option>
-          <option value="DRAFT">Chưa kích hoạt</option>
-          <option value="LEFT">Đã rời đi</option>
-          <option value="CANCELLED">Đã hủy</option>
-        </select>
-        <input
-          aria-label="Cư trú từ ngày"
-          type="date"
-          className="input w-auto"
-          value={from}
-          onChange={(e) => {
-            setFrom(e.target.value)
-            setPage(1)
-          }}
-        />
-        <input
-          aria-label="Cư trú đến ngày"
-          type="date"
-          className="input w-auto"
-          value={to}
-          onChange={(e) => {
-            setTo(e.target.value)
-            setPage(1)
-          }}
-        />
-      </div>
+      {!real && (
+        <div className="flex flex-wrap gap-3">
+          <SearchBox
+            value={q}
+            onChange={(v) => {
+              setQ(v)
+              setPage(1)
+            }}
+          />
+          <select
+            aria-label="Phòng"
+            className="input w-auto max-w-full"
+            value={roomId}
+            onChange={(e) => {
+              setRoom(e.target.value)
+              setSlot('')
+              setPage(1)
+            }}
+          >
+            <option value="">Tất cả phòng</option>
+            {rooms.data?.content.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.code}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Chỗ ở"
+            className="input w-auto"
+            value={slotId}
+            onChange={(e) => {
+              setSlot(e.target.value)
+              setPage(1)
+            }}
+          >
+            <option value="">Tất cả chỗ</option>
+            {slots.data?.content.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Quan hệ thuê"
+            className="input w-auto"
+            value={status}
+            onChange={(e) => {
+              setStatus(e.target.value)
+              setPage(1)
+            }}
+          >
+            <option value="">Tất cả trạng thái</option>
+            <option value="ACTIVE">Đang thuê</option>
+            <option value="DRAFT">Chưa kích hoạt</option>
+            <option value="LEFT">Đã rời đi</option>
+            <option value="CANCELLED">Đã hủy</option>
+          </select>
+          <input
+            aria-label="Cư trú từ ngày"
+            type="date"
+            className="input w-auto"
+            value={from}
+            onChange={(e) => {
+              setFrom(e.target.value)
+              setPage(1)
+            }}
+          />
+          <input
+            aria-label="Cư trú đến ngày"
+            type="date"
+            className="input w-auto"
+            value={to}
+            onChange={(e) => {
+              setTo(e.target.value)
+              setPage(1)
+            }}
+          />
+        </div>
+      )}
       <Records
         query={query}
         page={page}
@@ -784,7 +789,9 @@ export function ManagerTenancyDetail() {
                 items={[
                   [
                     'Liên hệ',
-                    `${query.data.email} · ${query.data.phone || 'Chưa có số điện thoại'}`,
+                    query.data.email || query.data.phone
+                      ? `${query.data.email} · ${query.data.phone || 'Chưa có số điện thoại'}`
+                      : 'Không hiển thị trong phạm vi thuê',
                   ],
                   [
                     'Chỗ ở',

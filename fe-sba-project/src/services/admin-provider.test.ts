@@ -24,6 +24,42 @@ afterEach(() => {
   vi.resetModules()
 })
 describe('Admin provider compatibility', () => {
+  it('maps real owner verification list (1-based) and approve/reject endpoints', async () => {
+    const record = {
+      userId: id,
+      fullName: 'Nguyễn Thảo Vy',
+      status: 'PENDING',
+      documentPublicId: 'owner-docs/abc',
+      documentResourceType: 'image',
+      reviewedBy: null,
+      reviewedAt: null,
+      reviewReason: null,
+    }
+    const fetch = vi
+      .fn()
+      .mockResolvedValueOnce(
+        json({ content: [record], number: 1, size: 8, totalElements: 1, totalPages: 1 }),
+      )
+      .mockResolvedValueOnce(json({ ...record, status: 'REJECTED', reviewReason: 'Thiếu giấy tờ' }))
+    vi.stubGlobal('fetch', fetch)
+    const { adminApi } = await import('./admin')
+    const page = await adminApi.list('verifications', { status: 'PENDING', page: '0', size: '8' })
+    expect(fetch.mock.calls[0][0]).toBe(
+      'https://api.example.test/api/admin/owner-verifications?status=PENDING&page=1&size=8',
+    )
+    expect(page.content[0].user.id).toBe(id)
+    expect(page.content[0].verification.document?.name).toBe('owner-docs/abc')
+    const decided = await adminApi.decide(id, {
+      decision: 'REJECTED',
+      reason: 'Thiếu giấy tờ',
+      version: '0',
+    })
+    expect(fetch.mock.calls[1][0]).toBe(
+      `https://api.example.test/api/admin/owner-verifications/${id}/reject`,
+    )
+    expect(JSON.parse(fetch.mock.calls[1][1].body)).toEqual({ reason: 'Thiếu giấy tờ' })
+    expect(decided.verification.status).toBe('REJECTED')
+  })
   it('hybrid intentionally routes supported users real and missing administration mock', async () => {
     vi.stubEnv('VITE_API_MODE', 'hybrid')
     const { provider } = await import('./config')

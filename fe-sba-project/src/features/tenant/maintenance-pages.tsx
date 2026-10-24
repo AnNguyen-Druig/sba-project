@@ -21,10 +21,13 @@ import { formatVnd } from '@/lib/format'
 import { dateTime } from '@/lib/activity'
 import { reportInputSchema, type ReportInput } from '@/interfaces/tenant'
 
+import type { RatedReport } from '@/services/tenant-maintenance'
 import { imageAttachment } from './attachments'
 export function MaintenancePage() {
   const { tenancy: t } = useTenant(),
-    query = useTenantQuery('maintenance', tenantApi.reports, [], true),
+    // Real API summaries carry no item, so there is nothing to filter by category.
+    real = tenantApi.real.maintenance(),
+    query = useTenantQuery('maintenance', (id) => tenantApi.reports(id, t.roomId), [], true),
     [state, setState] = useState(''),
     [category, setCategory] = useState(''),
     [page, setPage] = useState(1)
@@ -63,19 +66,21 @@ export function MaintenancePage() {
             </option>
           ))}
         </select>
-        <select
-          aria-label="Loại báo hỏng"
-          className="input w-auto"
-          value={category}
-          onChange={(e) => {
-            setCategory(e.target.value)
-            setPage(1)
-          }}
-        >
-          <option value="">Tất cả loại</option>
-          <option value="FURNITURE">Nội thất</option>
-          <option value="SERVICE">Dịch vụ</option>
-        </select>
+        {!real && (
+          <select
+            aria-label="Loại báo hỏng"
+            className="input w-auto"
+            value={category}
+            onChange={(e) => {
+              setCategory(e.target.value)
+              setPage(1)
+            }}
+          >
+            <option value="">Tất cả loại</option>
+            <option value="FURNITURE">Nội thất</option>
+            <option value="SERVICE">Dịch vụ</option>
+          </select>
+        )}
       </div>
       <QueryState
         pending={query.isPending}
@@ -101,7 +106,8 @@ export function MaintenancePage() {
               <div className="min-w-0">
                 <h2 className="break-words text-sm font-bold text-primary">{r.title}</h2>
                 <p className="mt-2 text-xs text-muted-foreground">
-                  {r.assetName} · {dateTime(r.createdAt)}
+                  {r.assetName ? `${r.assetName} · ` : ''}
+                  {dateTime(r.createdAt)}
                 </p>
                 <p className="mt-1 text-xs text-muted-foreground">
                   Ưu tiên {tenantStatusLabel(r.priority).toLowerCase()}
@@ -118,7 +124,12 @@ export function MaintenancePage() {
 }
 export function CreateMaintenancePage() {
   const { tenancy: t } = useTenant(),
-    room = useTenantQuery('room', tenantApi.room),
+    real = tenantApi.real.maintenance(),
+    // Real mode reads the room's furniture/services from BE; the mock room carries its assets.
+    room = useTenantQuery(
+      real ? 'report-options' : 'room',
+      real ? async () => ({ assets: await tenantApi.reportOptions(t.roomId) }) : tenantApi.room,
+    ),
     navigate = useNavigate(),
     [uploadError, setUploadError] = useState<Error | null>(null),
     [uploading, setUploading] = useState(false)
@@ -135,8 +146,9 @@ export function CreateMaintenancePage() {
     }),
     category = useWatch({ control: form.control, name: 'category' }),
     attachments = useWatch({ control: form.control, name: 'attachments' })
-  const mutation = useTenantMutation(tenantApi.createReport, (report) =>
-    navigate(tenantLink(`/tenant/maintenance/${report.id}`, t)),
+  const mutation = useTenantMutation(
+    (id, value: ReportInput) => tenantApi.createReport(id, value, t.roomId),
+    (report) => navigate(tenantLink(`/tenant/maintenance/${report.id}`, t)),
   )
   async function upload(files: FileList | null) {
     if (!files) return
@@ -235,27 +247,31 @@ export function CreateMaintenancePage() {
                   ))}
                 </select>
               </Field>
-              <Field
-                id="report-images"
-                label="Ảnh hiện trạng"
-                hint="JPG, PNG hoặc WebP · tối đa 3 ảnh · 1 MB mỗi ảnh"
-              >
-                <div className="flex min-w-0 items-center gap-3 text-sm text-muted-foreground">
-                  <Upload size={18} />
-                  <input
-                    id="report-images"
-                    type="file"
-                    accept="image/jpeg,image/png,image/webp"
-                    multiple
-                    disabled={uploading || mutation.isPending || !isActive(t)}
-                    className="w-full min-w-0 max-w-full"
-                    onChange={(e) => {
-                      void upload(e.target.files)
-                      e.target.value = ''
-                    }}
-                  />
-                </div>
-              </Field>
+              {real ? (
+                <Notice>Tải ảnh minh chứng chưa được hỗ trợ trên hệ thống thật.</Notice>
+              ) : (
+                <Field
+                  id="report-images"
+                  label="Ảnh hiện trạng"
+                  hint="JPG, PNG hoặc WebP · tối đa 3 ảnh · 1 MB mỗi ảnh"
+                >
+                  <div className="flex min-w-0 items-center gap-3 text-sm text-muted-foreground">
+                    <Upload size={18} />
+                    <input
+                      id="report-images"
+                      type="file"
+                      accept="image/jpeg,image/png,image/webp"
+                      multiple
+                      disabled={uploading || mutation.isPending || !isActive(t)}
+                      className="w-full min-w-0 max-w-full"
+                      onChange={(e) => {
+                        void upload(e.target.files)
+                        e.target.value = ''
+                      }}
+                    />
+                  </div>
+                </Field>
+              )}
               {uploading && (
                 <p role="status" className="text-sm text-muted-foreground">
                   Đang đọc ảnh…
@@ -309,10 +325,23 @@ export function CreateMaintenancePage() {
 export function MaintenanceDetailPage() {
   const { reportId = '' } = useParams(),
     { tenancy: t } = useTenant(),
-    query = useTenantQuery('report', (id) => tenantApi.report(id, reportId), [reportId], true),
+    real = tenantApi.real.maintenance(),
+    query = useTenantQuery(
+      'report',
+      (id) => tenantApi.report(id, reportId, t.roomId),
+      [reportId],
+      true,
+    ),
     [confirm, setConfirm] = useState(false),
     [image, setImage] = useState<string | null>(null)
   const cancel = useTenantMutation(tenantApi.cancelReport, () => setConfirm(false))
+  const [score, setScore] = useState(5),
+    [comment, setComment] = useState(''),
+    rate = useTenantMutation(() => tenantApi.rateReport(t.roomId, reportId, score, comment.trim()))
+  // Only the real API returns rating fields (P2-31); the mock flow has no rating.
+  const rated = query.data as RatedReport | undefined,
+    rating =
+      rated && 'rating' in rated ? { value: rated.rating, comment: rated.ratingComment } : null
   return (
     <TenantPage
       title="Chi tiết bảo trì"
@@ -358,7 +387,8 @@ export function MaintenanceDetailPage() {
                   ))}
                 </div>
               )}
-              {query.data.status === 'OPEN' && isActive(t) && (
+              {/* BE has no cancel endpoint for maintenance requests. */}
+              {!real && query.data.status === 'OPEN' && isActive(t) && (
                 <div className="mt-5">
                   <Button variant="outline" onClick={() => setConfirm(true)}>
                     Hủy yêu cầu bảo trì
@@ -366,6 +396,48 @@ export function MaintenanceDetailPage() {
                 </div>
               )}
             </Panel>
+            {real && query.data.status === 'COMPLETED' && rating && (
+              <Panel>
+                <h2 className="mb-4 font-bold">Đánh giá kết quả sửa chữa</h2>
+                {rating.value != null ? (
+                  <p className="text-sm">
+                    {rating.value}/5{rating.comment ? ` · ${rating.comment}` : ''}
+                  </p>
+                ) : (
+                  <div className="grid gap-4">
+                    <Field id="report-rating" label="Mức độ hài lòng">
+                      <select
+                        id="report-rating"
+                        className="input max-w-xs"
+                        value={score}
+                        onChange={(e) => setScore(Number(e.target.value))}
+                      >
+                        {[5, 4, 3, 2, 1].map((n) => (
+                          <option key={n} value={n}>
+                            {n}/5
+                          </option>
+                        ))}
+                      </select>
+                    </Field>
+                    <Field id="report-rating-comment" label="Nhận xét (không bắt buộc)">
+                      <textarea
+                        id="report-rating-comment"
+                        className="input min-h-24"
+                        maxLength={1000}
+                        value={comment}
+                        onChange={(e) => setComment(e.target.value)}
+                      />
+                    </Field>
+                    <InlineError error={rate.error} />
+                    <div>
+                      <Button loading={rate.isPending} onClick={() => rate.mutate(undefined)}>
+                        Gửi đánh giá
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </Panel>
+            )}
             <Panel>
               <h2 className="mb-6 font-bold">Tiến trình xử lý</h2>
               <ol className="space-y-7">
@@ -377,7 +449,9 @@ export function MaintenanceDetailPage() {
                       <time className="text-xs text-muted-foreground">{dateTime(r.at)}</time>
                     </div>
                     <p className="mt-3 whitespace-pre-wrap text-sm leading-7">{r.description}</p>
-                    <p className="mt-2 text-xs text-muted-foreground">{r.performedBy}</p>
+                    {r.performedBy && (
+                      <p className="mt-2 text-xs text-muted-foreground">{r.performedBy}</p>
+                    )}
                     {r.evidence.length > 0 && (
                       <div className="mt-4 grid max-w-sm grid-cols-3 gap-2">
                         {r.evidence.map((src) => (

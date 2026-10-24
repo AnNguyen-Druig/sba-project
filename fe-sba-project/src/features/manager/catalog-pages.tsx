@@ -7,11 +7,14 @@ import { Facts } from '@/features/tenant/components'
 import { formatVnd } from '@/lib/format'
 import { dateOnly } from '@/lib/activity'
 import { managerApi } from '@/services/manager'
+import { provider } from '@/services/config'
+import { furnitureInsights } from '@/services/manager-furniture'
 import {
   roomTypeInputSchema,
   serviceCatalogInputSchema,
   roomServiceInputSchema,
   assetInputSchema,
+  furnitureInputSchema,
   warrantyInputSchema,
   type ManagerAsset,
 } from '@/interfaces/manager'
@@ -36,18 +39,26 @@ const titles: Record<Kind, string> = {
 }
 function CatalogPage({ kind }: { kind: Kind }) {
   const [params] = useSearchParams(),
+    // GET /api/furnitures is room-scoped (roomId required) and has no text search.
+    realFurniture = kind === 'furnitures' && provider('managerFurnitures') === 'real',
     [q, setQ] = useState(''),
+    [roomId, setRoomId] = useState(params.get('roomId') || ''),
     [page, setPage] = useState(1),
     [selected, setSelected] = useState<Record<string, unknown> | null | undefined>(undefined),
     [deleting, setDeleting] = useState<string | null>(null),
-    query = useManagerList(kind, { q, page: String(page - 1), roomId: params.get('roomId') || '' }),
+    query = useManagerList(kind, { q, page: String(page - 1), roomId }),
     rooms = useManagerList('rooms', { size: '100' }),
     services = useManagerList('services', { size: '100' }),
     slots = useManagerList('slots', { size: '100' }),
     mutation = useManagerAction(() => {
       setSelected(undefined)
       setDeleting(null)
-    })
+    }),
+    insights = useManagerQuery(
+      'furniture-insights',
+      () => (realFurniture && roomId ? furnitureInsights(roomId) : Promise.resolve(null)),
+      [roomId],
+    )
   const roomOptions = rooms.data?.content.map((r) => ({
       value: r.id,
       label: `${r.code} · ${r.title}`,
@@ -141,51 +152,90 @@ function CatalogPage({ kind }: { kind: Kind }) {
         { name: 'unitPrice', label: 'Đơn giá áp dụng (VND)', kind: 'number', min: 0 },
       ] as FieldSpec[],
     },
-    furnitures: {
-      schema: assetInputSchema,
-      defaults: {
-        roomId: '',
-        roomSlotId: null,
-        code: '',
-        name: '',
-        category: 'Nội thất',
-        serial: '',
-        purchaseDate: today,
-        value: 0,
-        condition: 'Tốt',
-        operationalStatus: 'ACTIVE',
-      },
-      fields: [
-        { name: 'roomId', label: 'Phòng', kind: 'select', options: roomOptions },
-        {
-          name: 'roomSlotId',
-          label: 'Chỗ cá nhân (nếu có)',
-          kind: 'select',
-          nullable: true,
-          options: slots.data?.content.map((s) => ({
-            value: s.id,
-            label: `${rooms.data?.content.find((r) => r.id === s.roomId)?.code || ''} · ${s.name}`,
-          })),
+    furnitures: realFurniture
+      ? {
+          schema: furnitureInputSchema,
+          defaults: {
+            roomId,
+            code: '',
+            name: '',
+            category: 'Nội thất',
+            serial: '',
+            purchaseDate: today,
+            value: 0,
+            condition: 'Tốt',
+            operationalStatus: 'IN_USE',
+          },
+          fields: [
+            // Room cannot be changed after creation (FurnitureUpdateRequest has no roomId).
+            ...(selected
+              ? []
+              : [{ name: 'roomId', label: 'Phòng', kind: 'select', options: roomOptions }]),
+            { name: 'code', label: 'Mã tài sản' },
+            { name: 'name', label: 'Tên tài sản' },
+            { name: 'category', label: 'Nhóm tài sản' },
+            { name: 'serial', label: 'Số sê-ri' },
+            { name: 'purchaseDate', label: 'Ngày mua', kind: 'date' },
+            { name: 'value', label: 'Giá trị (VND)', kind: 'number', min: 0 },
+            { name: 'condition', label: 'Tình trạng' },
+            {
+              name: 'operationalStatus',
+              label: 'Vận hành',
+              kind: 'select',
+              options: [
+                { value: 'IN_USE', label: 'Đang sử dụng' },
+                { value: 'DAMAGED', label: 'Hư hỏng' },
+                { value: 'REPAIRING', label: 'Đang sửa chữa' },
+                { value: 'RETIRED', label: 'Ngừng sử dụng' },
+              ],
+            },
+          ] as FieldSpec[],
+        }
+      : {
+          schema: assetInputSchema,
+          defaults: {
+            roomId: '',
+            roomSlotId: null,
+            code: '',
+            name: '',
+            category: 'Nội thất',
+            serial: '',
+            purchaseDate: today,
+            value: 0,
+            condition: 'Tốt',
+            operationalStatus: 'ACTIVE',
+          },
+          fields: [
+            { name: 'roomId', label: 'Phòng', kind: 'select', options: roomOptions },
+            {
+              name: 'roomSlotId',
+              label: 'Chỗ cá nhân (nếu có)',
+              kind: 'select',
+              nullable: true,
+              options: slots.data?.content.map((s) => ({
+                value: s.id,
+                label: `${rooms.data?.content.find((r) => r.id === s.roomId)?.code || ''} · ${s.name}`,
+              })),
+            },
+            { name: 'code', label: 'Mã tài sản' },
+            { name: 'name', label: 'Tên tài sản' },
+            { name: 'category', label: 'Nhóm tài sản' },
+            { name: 'serial', label: 'Số sê-ri' },
+            { name: 'purchaseDate', label: 'Ngày mua', kind: 'date' },
+            { name: 'value', label: 'Giá trị (VND)', kind: 'number', min: 0 },
+            { name: 'condition', label: 'Tình trạng' },
+            {
+              name: 'operationalStatus',
+              label: 'Vận hành',
+              kind: 'select',
+              options: [
+                { value: 'ACTIVE', label: 'Đang sử dụng' },
+                { value: 'MAINTENANCE', label: 'Bảo trì' },
+                { value: 'INACTIVE', label: 'Ngừng sử dụng' },
+              ],
+            },
+          ] as FieldSpec[],
         },
-        { name: 'code', label: 'Mã tài sản' },
-        { name: 'name', label: 'Tên tài sản' },
-        { name: 'category', label: 'Nhóm tài sản' },
-        { name: 'serial', label: 'Số sê-ri' },
-        { name: 'purchaseDate', label: 'Ngày mua', kind: 'date' },
-        { name: 'value', label: 'Giá trị (VND)', kind: 'number', min: 0 },
-        { name: 'condition', label: 'Tình trạng' },
-        {
-          name: 'operationalStatus',
-          label: 'Vận hành',
-          kind: 'select',
-          options: [
-            { value: 'ACTIVE', label: 'Đang sử dụng' },
-            { value: 'MAINTENANCE', label: 'Bảo trì' },
-            { value: 'INACTIVE', label: 'Ngừng sử dụng' },
-          ],
-        },
-      ] as FieldSpec[],
-    },
   }[kind]
   const rows = query.data
     ? {
@@ -210,13 +260,35 @@ function CatalogPage({ kind }: { kind: Kind }) {
         </Button>
       }
     >
-      <SearchBox
-        value={q}
-        onChange={(v) => {
-          setQ(v)
-          setPage(1)
-        }}
-      />
+      {realFurniture ? (
+        <>
+          <select
+            aria-label="Phòng"
+            className="input w-auto max-w-full"
+            value={roomId}
+            onChange={(e) => {
+              setRoomId(e.target.value)
+              setPage(1)
+            }}
+          >
+            <option value="">Chọn phòng</option>
+            {rooms.data?.content.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.code} · {r.title}
+              </option>
+            ))}
+          </select>
+          {!roomId && <Notice>Chọn phòng để xem cơ sở vật chất.</Notice>}
+        </>
+      ) : (
+        <SearchBox
+          value={q}
+          onChange={(v) => {
+            setQ(v)
+            setPage(1)
+          }}
+        />
+      )}
       <Records
         query={{ ...query, data: rows }}
         page={page}
@@ -291,7 +363,7 @@ function CatalogPage({ kind }: { kind: Kind }) {
                 >
                   {kind === 'room-services' ? 'Giai đoạn giá mới' : 'Chỉnh sửa'}
                 </Button>
-                {(kind === 'room-types' || kind === 'furnitures') && (
+                {(kind === 'room-types' || (kind === 'furnitures' && !realFurniture)) && (
                   <Button variant="ghost" className="text-danger" onClick={() => setDeleting(r.id)}>
                     Xóa
                   </Button>
@@ -301,6 +373,32 @@ function CatalogPage({ kind }: { kind: Kind }) {
           },
         ]}
       />
+      {realFurniture && roomId && insights.data && (
+        <Panel>
+          <h2 className="mb-4 font-bold">Cảnh báo cơ sở vật chất của phòng</h2>
+          {insights.data.expiring.map((w) => (
+            <p key={w.id} className="border-t border-border py-3 text-sm">
+              <ManagerLink to={`/manager/furnitures/${w.furnitureId}`}>
+                Bảo hành {w.provider}
+              </ManagerLink>{' '}
+              hết hạn {dateOnly(w.endDate)}
+            </p>
+          ))}
+          {insights.data.failures.map((f) => (
+            <p key={f.furnitureId} className="border-t border-border py-3 text-sm">
+              <ManagerLink to={`/manager/furnitures/${f.furnitureId}`}>
+                {String(rows?.content.find((r) => r.id === f.furnitureId)?.name || 'Tài sản')}
+              </ManagerLink>{' '}
+              đã được báo hỏng {f.requestCount} lần
+            </p>
+          ))}
+          {!insights.data.expiring.length && !insights.data.failures.length && (
+            <p className="text-sm text-muted-foreground">
+              Không có bảo hành sắp hết hạn trong 30 ngày hoặc tài sản hỏng lặp lại.
+            </p>
+          )}
+        </Panel>
+      )}
       <Modal
         title={
           selected
@@ -353,6 +451,8 @@ export function ManagerFurnitureDetail() {
     query = useManagerQuery('furniture', (b) => managerApi.get(b, 'furnitures', furnitureId), [
       furnitureId,
     ]),
+    // Real maintenance summaries are room-scoped and carry no item, so history comes from the room view.
+    realMaintenance = provider('managerMaintenance') === 'real',
     reports = useManagerList('maintenance', { size: '100' }),
     [warranty, setWarranty] = useState<ManagerAsset['warranties'][number] | null | undefined>(
       undefined,
@@ -423,19 +523,30 @@ export function ManagerFurnitureDetail() {
             </Panel>
             <Panel>
               <h2 className="mb-5 font-bold">Lịch sử sửa chữa</h2>
-              <QueryState pending={reports.isPending} error={reports.error} retry={reports.refetch}>
-                {reports.data?.content
-                  .filter((r) => r.assetId === furnitureId)
-                  .map((r) => (
-                    <div
-                      key={r.id}
-                      className="flex flex-wrap items-center justify-between gap-3 border-t border-border py-3"
-                    >
-                      <ManagerLink to={`/manager/maintenance/${r.id}`}>{r.title}</ManagerLink>
-                      <ManagerStatus value={r.status} />
-                    </div>
-                  ))}
-              </QueryState>
+              {realMaintenance ? (
+                <p className="mb-5 text-sm">
+                  Xem các yêu cầu sửa chữa của phòng tại{' '}
+                  <ManagerLink to="/manager/maintenance">Sửa chữa & bảo trì</ManagerLink>.
+                </p>
+              ) : (
+                <QueryState
+                  pending={reports.isPending}
+                  error={reports.error}
+                  retry={reports.refetch}
+                >
+                  {reports.data?.content
+                    .filter((r) => r.assetId === furnitureId)
+                    .map((r) => (
+                      <div
+                        key={r.id}
+                        className="flex flex-wrap items-center justify-between gap-3 border-t border-border py-3"
+                      >
+                        <ManagerLink to={`/manager/maintenance/${r.id}`}>{r.title}</ManagerLink>
+                        <ManagerStatus value={r.status} />
+                      </div>
+                    ))}
+                </QueryState>
+              )}
               <Notice>
                 Tài sản có lịch sử xử lý được bảo vệ khỏi xóa. Ngừng sử dụng chỉ khi không còn sửa
                 chữa đang mở.

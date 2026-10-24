@@ -18,9 +18,17 @@ public interface TenantDirectoryRepository extends Repository<ContractTenant, UU
     String PROJECTION = """
             select new com.sba.project.modules.leasing.dto.response.TenantResponse(
                 ct.id, ct.contractId, c.branchId, ct.roomId, ct.roomSlotId, ct.tenantUserId, u.fullName,
-                ct.role, ct.status, ct.startDate, ct.endDate, ct.actualLeaveDate)
-            from ContractTenant ct, Contract c, User u
-            where c.id = ct.contractId and u.id = ct.tenantUserId
+                ct.role, ct.status, ct.startDate, ct.endDate, ct.actualLeaveDate,
+                b.name, r.code, s.name, c.code, c.status, c.rentalMode,
+                ct.monthlyRent, ct.firstMonthRent, ct.lastMonthRent,
+                ct.prepaidFirstRequired, ct.prepaidLastRequired, ct.terms, c.terms)
+            from ContractTenant ct
+            join Contract c on c.id = ct.contractId
+            join User u on u.id = ct.tenantUserId
+            join Branch b on b.id = c.branchId
+            join Room r on r.id = ct.roomId
+            left join RoomSlot s on s.id = ct.roomSlotId
+            where 1 = 1
             """;
     String COUNT = """
             select count(ct) from ContractTenant ct, Contract c

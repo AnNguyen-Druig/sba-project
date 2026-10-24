@@ -6,12 +6,15 @@ import com.sba.project.modules.leasing.dto.response.OccupancyResponse;
 import com.sba.project.modules.leasing.dto.response.TenantResponse;
 import com.sba.project.modules.leasing.entity.ContractTenant;
 import com.sba.project.modules.leasing.entity.RoomSlotOccupancy;
+import com.sba.project.modules.leasing.enums.ContractStatus;
 import com.sba.project.modules.leasing.enums.ContractTenantRole;
 import com.sba.project.modules.leasing.enums.ContractTenantStatus;
+import com.sba.project.modules.leasing.enums.RentalMode;
 import com.sba.project.modules.leasing.mapper.TenantMapperImpl;
 import com.sba.project.modules.leasing.repository.OccupancyReadRepository;
 import com.sba.project.modules.leasing.repository.TenantDirectoryRepository;
 import com.sba.project.modules.leasing.service.TenantAccessPolicy;
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
@@ -147,7 +150,9 @@ class TenantDirectoryServiceImplTests {
     private static TenantResponse tenant() {
         return new TenantResponse(UUID.randomUUID(), CONTRACT, BRANCH, ROOM, null, UUID.randomUUID(), "Tenant A",
                 ContractTenantRole.REPRESENTATIVE, ContractTenantStatus.ACTIVE, LocalDate.of(2026, 1, 1),
-                LocalDate.of(2026, 12, 31), null);
+                LocalDate.of(2026, 12, 31), null, "Branch A", "R101", null, "HD-001", ContractStatus.ACTIVE,
+                RentalMode.ROOM, BigDecimal.valueOf(3_000_000), BigDecimal.valueOf(3_000_000),
+                BigDecimal.valueOf(3_000_000), BigDecimal.ZERO, BigDecimal.ZERO, "Member terms", "Shared terms");
     }
 
     private static void assertError(org.assertj.core.api.ThrowableAssert.ThrowingCallable call, ErrorCode code) {

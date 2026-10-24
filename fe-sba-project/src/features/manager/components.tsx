@@ -75,6 +75,10 @@ export function ManagerLink({
   return button ? <Button asChild>{link}</Button> : link
 }
 const labels: Record<string, string> = {
+  IN_USE: 'Đang sử dụng',
+  DAMAGED: 'Hư hỏng',
+  REPAIRING: 'Đang sửa chữa',
+  RETIRED: 'Ngừng sử dụng',
   AVAILABLE: 'Có thể thuê',
   OCCUPIED: 'Đang ở',
   HELD: 'Đang giữ',
@@ -91,15 +95,15 @@ export function ManagerStatus({ value }: { value: string }) {
   return (
     <StatusBadge
       tone={
-        ['ACTIVE', 'APPROVED', 'VERIFIED', 'CONFIRMED', 'FINALIZED', 'PAID', 'COMPLETED'].includes(
+        ['ACTIVE', 'APPROVED', 'VERIFIED', 'CONFIRMED', 'FINALIZED', 'PAID', 'COMPLETED', 'IN_USE'].includes(
           value,
         )
           ? 'success'
-          : ['PENDING', 'REVIEW', 'HELD', 'OPEN', 'AWAITING_PAYMENT', 'CANCEL_REQUESTED'].includes(
+          : ['PENDING', 'REVIEW', 'HELD', 'OPEN', 'AWAITING_PAYMENT', 'CANCEL_REQUESTED', 'REPAIRING'].includes(
                 value,
               )
             ? 'warning'
-            : ['REJECTED', 'FAILED', 'OVERDUE'].includes(value)
+            : ['REJECTED', 'FAILED', 'OVERDUE', 'DAMAGED'].includes(value)
               ? 'danger'
               : 'neutral'
       }

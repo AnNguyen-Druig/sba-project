@@ -39,6 +39,18 @@ class RentalBootstrapTests {
         verifyNoInteractions(dataSource);
     }
 
+    @Test
+    void accessPolicyQueriesCompileAgainstTheEntityModel() {
+        try (var entityManager = entityManagerFactory.createEntityManager()) {
+            entityManager.createQuery(com.sba.project.common.security.BranchScope.BRANCH_QUERY, Long.class);
+            entityManager.createQuery(com.sba.project.common.security.BranchScope.ROOM_QUERY, Long.class);
+            entityManager.createQuery(
+                    com.sba.project.modules.maintenance.service.impl.ContractRoomTenancyPort.QUERY,
+                    java.util.UUID.class);
+        }
+        verifyNoInteractions(dataSource);
+    }
+
     @TestConfiguration(proxyBeanMethods = false)
     static class OfflineDatabase {
         @Bean

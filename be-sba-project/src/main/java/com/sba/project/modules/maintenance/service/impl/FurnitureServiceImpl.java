@@ -12,6 +12,7 @@ import com.sba.project.modules.maintenance.entity.Furniture;
 import com.sba.project.modules.maintenance.entity.FurnitureWarranty;
 import com.sba.project.modules.maintenance.enums.FurnitureStatus;
 import com.sba.project.modules.maintenance.enums.ReportRequestStatus;
+import com.sba.project.modules.maintenance.service.RoomTenancyPort;
 import com.sba.project.modules.maintenance.mapper.FurnitureMapper;
 import com.sba.project.modules.maintenance.repository.FurnitureRepository;
 import com.sba.project.modules.maintenance.repository.FurnitureWarrantyRepository;
@@ -48,6 +49,7 @@ public class FurnitureServiceImpl implements FurnitureService {
     private final ReportRequestFurnitureRepository reportRequestFurnitureRepository;
     private final FurnitureMapper furnitureMapper;
     private final MaintenanceAccessPolicy accessPolicy;
+    private final RoomTenancyPort tenancyPort;
 
     @Override
     @Transactional
@@ -70,7 +72,7 @@ public class FurnitureServiceImpl implements FurnitureService {
     @Transactional(readOnly = true)
     public PagedResponse<FurnitureResponse> searchFurniture(UUID roomId, FurnitureStatus status, String furnitureType,
             Pageable pageable) {
-        requireRoomManager(roomId);
+        requireRoomReader(roomId);
         Page<Furniture> page = furnitureRepository.findAll(
                 FurnitureSpecifications.search(roomId, status, furnitureType), withAllowedSort(pageable));
         List<FurnitureResponse> content = page.getContent().stream().map(furnitureMapper::toResponse).toList();
@@ -159,6 +161,15 @@ public class FurnitureServiceImpl implements FurnitureService {
     private FurnitureWarranty loadWarranty(UUID furnitureId, UUID warrantyId) {
         return warrantyRepository.findByIdAndFurnitureId(warrantyId, furnitureId)
                 .orElseThrow(() -> new AppException(ErrorCode.FURNITURE_WARRANTY_NOT_FOUND));
+    }
+
+    /** P1-109 for Owner/Manager; P1-111: the room's active tenant may read it to report damage. */
+    private void requireRoomReader(UUID roomId) {
+        UUID actorId = accessPolicy.currentUserId();
+        if (!accessPolicy.canManageRoom(actorId, roomId)
+                && tenancyPort.findActiveContractTenantId(actorId, roomId).isEmpty()) {
+            throw new AppException(ErrorCode.UNAUTHORIZED);
+        }
     }
 
     private void requireRoomManager(UUID roomId) {

@@ -25,5 +25,8 @@ const labels: Record<string, string> = {
   NORMAL: 'Bình thường',
   HIGH: 'Cao',
   URGENT: 'Khẩn cấp',
+  WORK: 'Ghi nhận xử lý',
+  ASSIGNMENT: 'Phân công xử lý',
+  STATUS: 'Cập nhật trạng thái',
 }
 export const tenantStatusLabel = (s: string) => labels[s] || s

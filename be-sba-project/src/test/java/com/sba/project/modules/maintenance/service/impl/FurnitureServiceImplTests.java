@@ -16,6 +16,7 @@ import com.sba.project.modules.maintenance.repository.FurnitureRepository;
 import com.sba.project.modules.maintenance.repository.FurnitureWarrantyRepository;
 import com.sba.project.modules.maintenance.repository.ReportRequestFurnitureRepository;
 import com.sba.project.modules.maintenance.service.MaintenanceAccessPolicy;
+import com.sba.project.modules.maintenance.service.RoomTenancyPort;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
@@ -51,12 +52,13 @@ class FurnitureServiceImplTests {
     @Mock FurnitureWarrantyRepository warrantyRepository;
     @Mock ReportRequestFurnitureRepository reportRequestFurnitureRepository;
     @Mock MaintenanceAccessPolicy accessPolicy;
+    @Mock RoomTenancyPort tenancyPort;
     FurnitureServiceImpl service;
 
     @BeforeEach
     void setUp() {
         service = new FurnitureServiceImpl(furnitureRepository, warrantyRepository,
-                reportRequestFurnitureRepository, new FurnitureMapperImpl(), accessPolicy);
+                reportRequestFurnitureRepository, new FurnitureMapperImpl(), accessPolicy, tenancyPort);
     }
 
     @Test
@@ -177,6 +179,16 @@ class FurnitureServiceImplTests {
 
         assertError(() -> service.searchFurniture(ROOM, null, null, PageRequest.of(0, 20)), ErrorCode.UNAUTHORIZED);
         verify(furnitureRepository, never()).findAll(any(Specification.class), any(Pageable.class));
+    }
+
+    @Test
+    void activeTenantOfTheRoomMayListItsFurniture() {
+        when(accessPolicy.currentUserId()).thenReturn(ACTOR);
+        when(tenancyPort.findActiveContractTenantId(ACTOR, ROOM)).thenReturn(java.util.Optional.of(UUID.randomUUID()));
+        when(furnitureRepository.findAll(any(Specification.class), any(Pageable.class)))
+                .thenAnswer(call -> new PageImpl<>(List.of(), call.getArgument(1), 0));
+
+        assertThat(service.searchFurniture(ROOM, null, null, PageRequest.of(0, 20)).getTotalElements()).isZero();
     }
 
     @Test

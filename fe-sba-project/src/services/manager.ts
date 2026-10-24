@@ -1,5 +1,9 @@
 import { z } from 'zod'
-import { request, write } from './http'
+import { ApiError, request, write } from './http'
+import { provider } from './config'
+import { tenantPageSchema, toTenancy, type TenantResponse } from './tenant'
+import { realFurniture, realFurnitureAction, realFurnitures } from './manager-furniture'
+import { realMaintenance, realMaintenanceAction, realMaintenanceList } from './manager-maintenance'
 import { pageSchema, type Page } from '@/interfaces/domain'
 import {
   branchAssignmentSchema,
@@ -11,6 +15,36 @@ import {
   type ManagerRecord,
 } from '@/interfaces/manager'
 const scope = (branchId: string) => `/api/manager/branches/${encodeURIComponent(branchId)}`
+const toManagerTenancy = (t: TenantResponse) => ({
+  ...toTenancy(t),
+  userName: t.fullName,
+  // BE exposes the display name only (P1-31); contact data is not part of the contract.
+  email: '',
+  phone: null,
+  sourceBookingId: null,
+})
+// GET /api/tenants takes exactly one of branchId/roomId/contractId and a 1-based page.
+const realTenants = async (branchId: string, filters: Record<string, string>) => {
+  const page = await request(
+    'managerTenants',
+    `/api/tenants?${new URLSearchParams({
+      ...(filters.roomId ? { roomId: filters.roomId } : { branchId }),
+      page: String(Number(filters.page || 0) + 1),
+      size: filters.size || '8',
+    })}`,
+    tenantPageSchema,
+  )
+  return { ...page, content: page.content.map(toManagerTenancy) }
+}
+// No GET /api/tenants/{id}: scan the branch directory.
+const realTenancy = async (branchId: string, id: string) => {
+  for (let page = 0; ; page++) {
+    const result = await realTenants(branchId, { page: String(page), size: '100' })
+    const found = result.content.find((t) => t.id === id)
+    if (found) return found
+    if (page + 1 >= result.totalPages) throw new ApiError('Không tìm thấy quan hệ thuê.', 404)
+  }
+}
 const result = z.object({ id: z.string().uuid().optional() }).passthrough().nullable()
 export const managerApi = {
   previewCharge: (branchId: string, value: unknown) =>
@@ -32,17 +66,29 @@ export const managerApi = {
     resource: K,
     filters: Record<string, string> = {},
   ) =>
-    request(
-      'manager',
-      `${scope(branchId)}/${resource}?${new URLSearchParams({ page: '0', size: '8', ...filters })}`,
-      pageSchema(managerSchemas[resource]) as z.ZodType<Page<ManagerRecord<K>>>,
-    ),
+    resource === 'tenants' && provider('managerTenants') === 'real'
+      ? (realTenants(branchId, filters) as Promise<Page<ManagerRecord<K>>>)
+      : resource === 'furnitures' && provider('managerFurnitures') === 'real'
+        ? (realFurnitures(branchId, filters) as unknown as Promise<Page<ManagerRecord<K>>>)
+        : resource === 'maintenance' && provider('managerMaintenance') === 'real'
+          ? (realMaintenanceList(filters) as Promise<Page<ManagerRecord<K>>>)
+          : request(
+              'manager',
+              `${scope(branchId)}/${resource}?${new URLSearchParams({ page: '0', size: '8', ...filters })}`,
+              pageSchema(managerSchemas[resource]) as z.ZodType<Page<ManagerRecord<K>>>,
+            ),
   get: <K extends ManagerResource>(branchId: string, resource: K, id: string) =>
-    request(
-      'manager',
-      `${scope(branchId)}/${resource}/${encodeURIComponent(id)}`,
-      managerSchemas[resource] as unknown as z.ZodType<ManagerRecord<K>>,
-    ),
+    resource === 'tenants' && provider('managerTenants') === 'real'
+      ? (realTenancy(branchId, id) as Promise<ManagerRecord<K>>)
+      : resource === 'furnitures' && provider('managerFurnitures') === 'real'
+        ? (realFurniture(branchId, id) as unknown as Promise<ManagerRecord<K>>)
+        : resource === 'maintenance' && provider('managerMaintenance') === 'real'
+          ? (realMaintenance(id) as Promise<ManagerRecord<K>>)
+          : request(
+              'manager',
+              `${scope(branchId)}/${resource}/${encodeURIComponent(id)}`,
+              managerSchemas[resource] as unknown as z.ZodType<ManagerRecord<K>>,
+            ),
   action: (
     branchId: string,
     resource: ManagerResource,
@@ -51,12 +97,20 @@ export const managerApi = {
     value: unknown,
     method: 'POST' | 'PATCH' | 'DELETE' = 'POST',
   ) =>
-    request(
-      'manager',
-      `${scope(branchId)}/${resource}${id ? `/${encodeURIComponent(id)}` : ''}${action ? `/${action}` : ''}`,
-      result,
-      write(method, value),
-    ),
+    resource === 'furnitures' && provider('managerFurnitures') === 'real'
+      ? (realFurnitureAction(id, action, value as Record<string, unknown>, method) as Promise<{
+          id?: string
+        } | null>)
+      : resource === 'maintenance' && provider('managerMaintenance') === 'real'
+        ? (realMaintenanceAction(id!, action, value as Record<string, unknown>) as Promise<{
+            id?: string
+          } | null>)
+        : request(
+            'manager',
+            `${scope(branchId)}/${resource}${id ? `/${encodeURIComponent(id)}` : ''}${action ? `/${action}` : ''}`,
+            result,
+            write(method, value),
+          ),
   users: (branchId: string) =>
     request(
       'manager',

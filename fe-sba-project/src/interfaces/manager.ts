@@ -273,6 +273,11 @@ export const assetSchema = assetInputSchema.extend({
   warranties: z.array(warrantySchema),
 })
 export type ManagerAsset = z.infer<typeof assetSchema>
+// BE FurnitureStatus; the real API has no slot on furniture.
+export const furnitureStatusSchema = z.enum(['IN_USE', 'DAMAGED', 'REPAIRING', 'RETIRED'])
+export const furnitureInputSchema = assetInputSchema
+  .omit({ roomSlotId: true })
+  .extend({ operationalStatus: furnitureStatusSchema })
 export const managerReportSchema = reportSchema.extend({
   roomId: uuid,
   roomName: z.string(),

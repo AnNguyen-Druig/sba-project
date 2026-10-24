@@ -16,6 +16,8 @@ import {
 import { formatVnd } from '@/lib/format'
 import { dateOnly, dateTime } from '@/lib/activity'
 import { managerApi } from '@/services/manager'
+import { costStats } from '@/services/manager-maintenance'
+import { provider } from '@/services/config'
 import {
   ManagerPage,
   ManagerLink,
@@ -848,20 +850,50 @@ export function ManagerAllocations() {
   )
 }
 export function ManagerMaintenance() {
-  const [q, setQ] = useState(''),
+  // GET /api/maintenance-requests is room-scoped (roomId required) and has no text search.
+  const real = provider('managerMaintenance') === 'real',
+    [q, setQ] = useState(''),
+    [roomId, setRoomId] = useState(''),
     [status, setStatus] = useState(''),
     [page, setPage] = useState(1),
-    query = useManagerList('maintenance', { q, status, page: String(page - 1) }, true)
+    query = useManagerList('maintenance', { q, status, roomId, page: String(page - 1) }, true),
+    rooms = useManagerList('rooms', { size: '100' }),
+    stats = useManagerQuery(
+      'maintenance-cost-stats',
+      (b) => (real ? costStats(b) : Promise.resolve([])),
+      [],
+      false,
+    ),
+    roomCode = (id: string) => rooms.data?.content.find((r) => r.id === id)?.code || id
   return (
     <ManagerPage title="Sửa chữa & bảo trì">
       <div className="flex flex-wrap gap-3">
-        <SearchBox
-          value={q}
-          onChange={(v) => {
-            setQ(v)
-            setPage(1)
-          }}
-        />
+        {real ? (
+          <select
+            aria-label="Phòng"
+            className="input w-auto max-w-full"
+            value={roomId}
+            onChange={(e) => {
+              setRoomId(e.target.value)
+              setPage(1)
+            }}
+          >
+            <option value="">Chọn phòng</option>
+            {rooms.data?.content.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.code} · {r.title}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <SearchBox
+            value={q}
+            onChange={(v) => {
+              setQ(v)
+              setPage(1)
+            }}
+          />
+        )}
         <select
           aria-label="Trạng thái sửa chữa"
           className="input w-auto"
@@ -879,6 +911,7 @@ export function ManagerMaintenance() {
           <option value="REJECTED">Từ chối</option>
         </select>
       </div>
+      {real && !roomId && <Notice>Chọn phòng để xem yêu cầu sửa chữa.</Notice>}
       <Records
         query={query}
         page={page}
@@ -890,7 +923,7 @@ export function ManagerMaintenance() {
               <>
                 <ManagerLink to={`/manager/maintenance/${r.id}`}>{r.title}</ManagerLink>
                 <p className="text-xs text-muted-foreground">
-                  {r.assetName} · {r.roomName}
+                  {real ? roomCode(r.roomId) : `${r.assetName} · ${r.roomName}`}
                 </p>
               </>
             ),
@@ -918,11 +951,41 @@ export function ManagerMaintenance() {
           },
         ]}
       />
+      {real && (
+        <Panel>
+          <h2 className="mb-4 font-bold">Chi phí sửa chữa đã duyệt theo phòng</h2>
+          <QueryState pending={stats.isPending} error={stats.error} retry={stats.refetch}>
+            {stats.data?.length ? (
+              stats.data.map((s) => (
+                <p
+                  key={`${s.roomId}-${s.responsibleParty}`}
+                  className="flex flex-wrap justify-between gap-3 border-t border-border py-3 text-sm"
+                >
+                  <span>
+                    {roomCode(s.roomId)} ·{' '}
+                    {s.responsibleParty === 'TENANT' ? 'Người thuê chịu' : 'Chủ nhà chịu'}
+                  </span>
+                  <strong>{formatVnd(s.totalAmount)}</strong>
+                </p>
+              ))
+            ) : (
+              <p className="text-sm text-muted-foreground">Chưa có chi phí được duyệt.</p>
+            )}
+          </QueryState>
+        </Panel>
+      )}
     </ManagerPage>
   )
 }
 export function ManagerMaintenanceDetail() {
-  const { reportId = '' } = useParams(),
+  const real = provider('managerMaintenance') === 'real',
+    { branch } = useManager(),
+    // BE assignee must be able to manage the room (Branch Owner or its Manager).
+    assignees = [
+      ...(branch.managerId ? [{ value: branch.managerId, label: branch.managerName }] : []),
+      { value: branch.ownerId, label: 'Chủ trọ' },
+    ].filter((a, i, all) => all.findIndex((b) => b.value === a.value) === i),
+    { reportId = '' } = useParams(),
     query = useManagerQuery(
       'maintenance-detail',
       (b) => managerApi.get(b, 'maintenance', reportId),
@@ -949,11 +1012,19 @@ export function ManagerMaintenanceDetail() {
               <Facts
                 items={[
                   ['Tài sản / dịch vụ', query.data.assetName],
-                  ['Phòng', query.data.roomName],
-                  ['Người gửi', query.data.tenantName],
+                  ['Phòng', query.data.roomName || '—'],
+                  ['Người gửi', query.data.tenantName || '—'],
                   ['Trạng thái', <ManagerStatus value={query.data.status} />],
                   ['Mức độ', <ManagerStatus value={query.data.priority} />],
-                  ['Phụ trách', query.data.assignedTo],
+                  ['Phụ trách', query.data.assignedTo || 'Chưa phân công'],
+                  ...('rating' in query.data && query.data.rating != null
+                    ? ([
+                        [
+                          'Đánh giá của người thuê',
+                          `${query.data.rating}/5${'ratingComment' in query.data && query.data.ratingComment ? ` · ${query.data.ratingComment}` : ''}`,
+                        ],
+                      ] as [string, string][])
+                    : []),
                 ]}
               />
               <p className="mt-6 whitespace-pre-wrap text-sm leading-7">{query.data.description}</p>
@@ -1005,8 +1076,9 @@ export function ManagerMaintenanceDetail() {
                     {r.cost > 0 && (
                       <div className="mt-3">
                         <p className="text-sm font-bold">
-                          {formatVnd(r.cost)} ·{' '}
-                          {r.responsibleParty === 'TENANT' ? 'Người thuê' : 'Chủ nhà'} chịu
+                          {formatVnd(r.cost)}
+                          {(!real || r.responsibleParty) &&
+                            ` · ${r.responsibleParty === 'TENANT' ? 'Người thuê' : 'Chủ nhà'} chịu`}
                         </p>
                         <div className="mt-2 flex flex-wrap items-center gap-3">
                           <ManagerStatus value={r.approvalStatus || 'PENDING'} />
@@ -1092,7 +1164,15 @@ export function ManagerMaintenanceDetail() {
               })
             }
           >
-            <EvidenceInput value={evidence} onChange={setEvidence} disabled={mutation.isPending} />
+            {real ? (
+              <Notice>Tải ảnh minh chứng chưa được hỗ trợ trên hệ thống thật.</Notice>
+            ) : (
+              <EvidenceInput
+                value={evidence}
+                onChange={setEvidence}
+                disabled={mutation.isPending}
+              />
+            )}
           </ManagerForm>
         </Modal>
       ) : (
@@ -1103,10 +1183,22 @@ export function ManagerMaintenanceDetail() {
             if (!v) setAction('')
           }}
           fields={
-            ['accept', 'assign'].includes(action)
-              ? [{ name: 'handler', label: 'Người được phân công' }]
-              : []
+            real
+              ? action === 'assign'
+                ? [
+                    {
+                      name: 'handler',
+                      label: 'Người được phân công',
+                      kind: 'select',
+                      options: assignees,
+                    },
+                  ]
+                : []
+              : ['accept', 'assign'].includes(action)
+                ? [{ name: 'handler', label: 'Người được phân công' }]
+                : []
           }
+          defaults={real && action === 'assign' ? { handler: assignees[0]?.value } : {}}
           pending={mutation.isPending}
           error={mutation.error}
           onConfirm={(value) =>

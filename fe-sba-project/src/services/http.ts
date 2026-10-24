@@ -36,6 +36,16 @@ const errorMessages: Record<number, string> = {
   1302: 'Yêu cầu giữ chỗ đã hết hạn.',
   1305: 'Khoảng thời gian thuê chưa hợp lệ.',
   1306: 'Trạng thái yêu cầu không cho phép thực hiện thao tác này.',
+  1700: 'Không tìm thấy tài sản.',
+  1704: 'Không tìm thấy thông tin bảo hành.',
+  1705: 'Mã tài sản đã được dùng trong phòng này.',
+  1706: 'Ngày kết thúc bảo hành không được trước ngày bắt đầu.',
+  1707: 'Tài sản đang gắn với yêu cầu sửa chữa chưa hoàn tất.',
+  1701: 'Không tìm thấy yêu cầu bảo trì.',
+  1703: 'Trạng thái yêu cầu bảo trì không cho phép thao tác này.',
+  1708: 'Chọn ít nhất một tài sản hoặc dịch vụ cần sửa.',
+  1709: 'Mục được báo không thuộc phòng đang thuê.',
+  1710: 'Một mục chỉ được báo một lần trong yêu cầu.',
 }
 export async function request<T>(
   feature: Feature,

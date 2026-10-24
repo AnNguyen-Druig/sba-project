@@ -18,7 +18,7 @@ export function TenantDashboard() {
   const { tenancy: t } = useTenant(),
     userId = useSession((s) => s.user!.id)
   const invoices = useTenantQuery('invoices', tenantApi.invoices, [], true),
-    reports = useTenantQuery('maintenance', tenantApi.reports, [], true),
+    reports = useTenantQuery('maintenance', (id) => tenantApi.reports(id, t.roomId), [], true),
     services = useTenantQuery('services', tenantApi.services, [], true)
   const notifications = useQuery({
     queryKey: ['notifications', userId, 'tenant-dashboard'],
@@ -414,7 +414,7 @@ export function ContractDetailPage({ terms = false }: { terms?: boolean }) {
             </Panel>
             {terms ? (
               <>
-                <PrepaidPanel/>
+                <PrepaidPanel />
                 <Panel>
                   <h2 className="mb-5 font-bold">Tiền thuê trả trước</h2>
                   <QueryState

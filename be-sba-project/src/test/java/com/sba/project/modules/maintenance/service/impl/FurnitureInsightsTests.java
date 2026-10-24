@@ -44,7 +44,7 @@ class FurnitureInsightsTests {
     @BeforeEach
     void setUp() {
         service = new FurnitureServiceImpl(furnitureRepository, warrantyRepository, linkRepository,
-                new FurnitureMapperImpl(), accessPolicy);
+                new FurnitureMapperImpl(), accessPolicy, (userId, roomId) -> java.util.Optional.empty());
         when(accessPolicy.currentUserId()).thenReturn(ACTOR);
     }
 

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { useParams } from 'react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Panel, QueryState, Notice, Modal } from '@/components/common/page'
@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Facts } from '@/features/tenant/components'
 import { Records, ActionDialog } from '@/features/manager/components'
 import { adminApi } from '@/services/admin'
+import { provider } from '@/services/config'
 import { useSession } from '@/features/auth/session-store'
 import { useAdminQuery, useAdminMutation, useAdminFilters } from './context'
 import { AdminPage, AdminFilters, AdminLink, AdminStatus } from './components'
@@ -80,7 +81,9 @@ function DocumentPreview({
   )
 }
 export function AdminVerificationQueue() {
-  const state = useAdminFilters({ status: 'PENDING', from: '', to: '' }),
+  // BE lists PENDING/APPROVED/REJECTED only and has no submission-date filter.
+  const real = provider('adminVerifications') === 'real',
+    state = useAdminFilters({ status: 'PENDING', from: '', to: '' }),
     query = useAdminQuery('verifications', () => adminApi.list('verifications', state.filters), [
       state.filters,
     ])
@@ -94,8 +97,8 @@ export function AdminVerificationQueue() {
     >
       <AdminFilters
         state={state}
-        statuses={['PENDING', 'APPROVED', 'REJECTED', 'NOT_SUBMITTED']}
-        dates
+        statuses={['PENDING', 'APPROVED', 'REJECTED', ...(real ? [] : ['NOT_SUBMITTED'])]}
+        dates={!real}
       />
       <Records
         query={{ ...query, data: records }}
@@ -145,6 +148,7 @@ export function AdminVerificationQueue() {
 export function AdminVerificationDetail() {
   const { userId = '' } = useParams(),
     uid = useSession((s) => s.user!.id),
+    real = provider('adminVerifications') === 'real',
     query = useAdminQuery('verification', () => adminApi.review(userId), [userId]),
     [document, setDocument] = useState(false),
     [decision, setDecision] = useState<'APPROVED' | 'REJECTED' | null>(null),
@@ -156,8 +160,7 @@ export function AdminVerificationDetail() {
     )
   const canReview =
     query.data?.verification.status === 'PENDING' &&
-    query.data.user.status === 'ACTIVE' &&
-    !!query.data.verification.document &&
+    (real || (query.data.user.status === 'ACTIVE' && !!query.data.verification.document)) &&
     uid !== userId
   return (
     <AdminPage
@@ -175,19 +178,29 @@ export function AdminVerificationDetail() {
               <Facts
                 items={[
                   ['Mã người dùng', <span className="break-all">{userId}</span>],
-                  ['Liên hệ', query.data.user.email || query.data.user.phone || 'Chưa có'],
-                  ['Tài khoản', <AdminStatus value={query.data.user.status} />],
+                  // Real API does not return contact, account status or submission time.
+                  ...(real
+                    ? []
+                    : ([
+                        ['Liên hệ', query.data.user.email || query.data.user.phone || 'Chưa có'],
+                        ['Tài khoản', <AdminStatus value={query.data.user.status} />],
+                        [
+                          'Ngày nộp',
+                          query.data.verification.submittedAt
+                            ? dateTime(query.data.verification.submittedAt)
+                            : 'Chưa nộp',
+                        ],
+                        [
+                          'Xác minh liên hệ',
+                          query.data.verification.contactVerified ? 'Đã xác minh' : 'Chưa xác minh',
+                        ],
+                      ] as [string, ReactNode][])),
                   [
-                    'Ngày nộp',
-                    query.data.verification.submittedAt
-                      ? dateTime(query.data.verification.submittedAt)
-                      : 'Chưa nộp',
+                    'Người xét duyệt',
+                    query.data.reviewerName ||
+                      query.data.verification.reviewedBy ||
+                      'Chưa có thông tin',
                   ],
-                  [
-                    'Xác minh liên hệ',
-                    query.data.verification.contactVerified ? 'Đã xác minh' : 'Chưa xác minh',
-                  ],
-                  ['Người xét duyệt', query.data.reviewerName || 'Chưa có thông tin'],
                   [
                     'Xét duyệt lúc',
                     query.data.verification.reviewedAt
@@ -203,7 +216,7 @@ export function AdminVerificationDetail() {
               />
               <div className="mt-5 flex flex-wrap gap-4">
                 <AdminLink to={`/admin/users/${userId}`}>Xem tài khoản</AdminLink>
-                {query.data.verification.document && (
+                {!real && query.data.verification.document && (
                   <Button variant="outline" onClick={() => setDocument(true)}>
                     Xem tài liệu được phép
                   </Button>
@@ -214,7 +227,7 @@ export function AdminVerificationDetail() {
               <h2 className="mb-4 font-bold">Tài liệu & quyết định</h2>
               <p className="mb-4 break-words text-sm text-muted-foreground">
                 {query.data.verification.document
-                  ? `${query.data.verification.document.name} · ${query.data.verification.document.mime} · ${query.data.verification.document.size} byte`
+                  ? `${query.data.verification.document.name} · ${query.data.verification.document.mime}${real ? '' : ` · ${query.data.verification.document.size} byte`}`
                   : 'Hồ sơ chưa có tài liệu.'}
               </p>
               <Notice>
